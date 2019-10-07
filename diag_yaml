@@ -1,0 +1,29 @@
+---
+files:
+-    name: atmos_8xdaily
+     freq: 3
+     frequnit: hours
+     timeunit: days
+     unlimdim: time
+-    name: grid_spec
+     freq: -1
+     frequnit: months
+     timeunit: days
+     unlimdim: "time"
+-    name: "atmos_daily"
+     freq: 24
+     frequnit: hours
+     timeunit: days
+     unlimdim: time
+-    name: atmos_month
+     freq: 1
+     frequnit: months
+     timeunit: days
+     unlimdim: time
+-    name: land_monthly
+     freq: 1
+     frequnit: months
+     timeunit: days
+     unlimdim: time
+fields: 10 
+...
