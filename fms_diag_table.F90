@@ -1,6 +1,6 @@
 module fms_diag_table_mod
 
-use fms_diag_data_mod, only: diag_files_type, diag_fields_type
+use fms_diag_data_mod, only: diag_files_type, diag_fields_type, diag_error,fatal,note,warning
 use iso_c_binding
 implicit none
 
@@ -16,7 +16,7 @@ integer :: num_diag_files, num_diag_fields
 type(diag_files_type),  allocatable, dimension(:) :: diag_files 
 type(diag_fields_type), allocatable, dimension(:) :: diag_fields 
 logical :: diag_table_init = .false.
-integer :: fatal=-143, note=143
+
 
 
 !> Interface with C routines wrapping libyaml
@@ -137,17 +137,17 @@ character(len=:), intent(out), allocatable   :: diag_table_string
 
 end subroutine fms_read_diag_table
 
-subroutine diag_error(sub,mess,lev)
-character(len=*), intent(in)  :: sub
-character(len=*), intent(in)  :: mess
-integer, intent(in)           :: lev
-
-write (6,*)sub,":: ",mess
-if (lev==fatal) then
-     stop
-endif
-
-end subroutine diag_error
+!subroutine diag_error(sub,mess,lev)
+!character(len=*), intent(in)  :: sub
+!character(len=*), intent(in)  :: mess
+!integer, intent(in)           :: lev
+!
+!write (6,*)sub,":: ",mess
+!if (lev==fatal) then
+!     stop
+!endif
+!
+!end subroutine diag_error
 
 
 end module fms_diag_table_mod
