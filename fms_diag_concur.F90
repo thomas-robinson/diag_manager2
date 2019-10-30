@@ -22,7 +22,6 @@ interface operator (.eq.)
 end interface
 
 integer,parameter :: undef_comm=-999 
-integer :: diag_pes = 6 !< The number of PEs to run the diag_manager
 
 type(fms_diag_comm_type) :: undef_diag_comm !< The undefined diag communicator 
 logical :: fms_diag_concur_init = .false. !< Set to true after diag_comm_split is run
@@ -30,8 +29,9 @@ logical :: diag_comm_exist = .false. !< Set to true if there is a diagnostic com
 
 contains
 
-subroutine diag_comm_init (diag_comm,parent_comm)
- type(fms_diag_comm_type),intent(out) :: diag_comm !< The diag communicator
+subroutine diag_comm_init (diag_comm,diag_pes,parent_comm)
+ type(fms_diag_comm_type),intent(out)   :: diag_comm !< The diag communicator
+ integer, intent(in)                    :: diag_pes 
  integer, intent(in), optional :: parent_comm !< The parent communicator
 !> Initialize the communicator type as undefined
  if (fms_diag_concur_init) return
@@ -46,7 +46,7 @@ subroutine diag_comm_init (diag_comm,parent_comm)
  endif
 !> Set up the diagnostic communicator
 !write (6,*) " call diag_comm_split()"
- call diag_comm_split(diag_comm,parent_comm)
+ call diag_comm_split(diag_comm,diag_pes,parent_comm)
 !> Set the module to initialized
 !write (6,*) "  fms_diag_concur_init = .true."
  fms_diag_concur_init = .true.
@@ -54,8 +54,9 @@ subroutine diag_comm_init (diag_comm,parent_comm)
 end subroutine diag_comm_init
 
 !> \brief Sets up a communicator for the diag manager
-subroutine diag_comm_split (diag_comm,parent_comm)
- type(fms_diag_comm_type),intent(out) :: diag_comm !< The diag communicator
+subroutine diag_comm_split (diag_comm, diag_pes, parent_comm)
+ type(fms_diag_comm_type),intent(out)   :: diag_comm !< The diag communicator
+ integer, intent(in)                    :: diag_pes 
  integer, intent(in), optional :: parent_comm !< The parent communicator
  integer :: comm !< Parent Communicator
  integer :: mycomm !< New split communicator
@@ -84,7 +85,7 @@ subroutine diag_comm_split (diag_comm,parent_comm)
 !> Get informaiton 
  call MPI_COMM_SIZE(COMM, gsz, merr) 
  call MPI_COMM_RANK(COMM, grk, merr)
- if (gsz == diag_pes) then !> If the global size of the PEs is the same as the number of diag_PEsm 
+ if (gsz == diag_pes) then !> If the global size of the PEs is the same as the number of diag_PEs
                            !! then there should be no diag communicator
      diag_comm_exist = .false.
      return
@@ -104,7 +105,8 @@ subroutine diag_comm_split (diag_comm,parent_comm)
      call diag_set_comm (diag_comm,mycomm,lrk,lsz,grk,local_group,comm,ThereisAComm)
  else
      ThereisaComm = .false.
-     call diag_set_comm (diag_comm,undef_comm,undef_comm,undef_comm,undef_comm,undef_comm,undef_comm,ThereisaComm)
+     call diag_set_comm (diag_comm, undef_comm, undef_comm, undef_comm, undef_comm, undef_comm, &
+                         undef_comm,ThereisaComm)
  endif 
  !> Gather to set the diag_comm_exist on all ranks
  call MPI_ALLGATHER(ThereIsAComm,1,MPI_LOGICAL, &
@@ -206,8 +208,9 @@ subroutine fms_write_diag_comm (diag_comm,unit_for_writing)
      call mpi_barrier(diag_comm%comm,ierr)
      if (diag_comm%local_pe == 0 .and. diag_comm%comm == MPI_COMM_WORLD) &
           write(wunit,*)"We are a part of MPI_COMM_WORLD" 
+     call mpi_barrier(diag_comm%comm, ierr)
  elseif (.not. diag_comm_exist) then
-     write(wunit,*)"There is no diagnostic communicator"
+     call diag_error("fms_write_diag_comm","There is no diagnostic communicator",NOTE)
  endif
 end subroutine fms_write_diag_comm
 

@@ -22,6 +22,14 @@ diag_files:
      unlimdim: time
 
 diag_fields: 
+-    name: tdata
+     var:  tdata
+     files: [atmos_daily]
+     all: all
+     reduction: [False]
+     region: [none]
+     kind: double
+     module: "moist"
 -    name: precip
      var:  precip
      files: [atmos_8xdaily]

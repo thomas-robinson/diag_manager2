@@ -1,6 +1,6 @@
 program diag_manager_test1
 use fms_diag_manager2_mod
-include 'mpif.h'
+!include 'mpif.h'
 
 integer :: ierr
    call MPI_INIT(ierr)
