@@ -97,7 +97,7 @@ void diag_num_files (char* fname, int* ifiles_p, int* ifields_p)
 
 }
 
-void diag_get_file_info (char* fname, struct diag_files * diag_files_fortran, int i)
+void diag_get_file_info (char* fname, struct diag_files * diag_files_fortran, struct diag_fields * diag_fields_fortran, int i)
 {
 
     yaml_token_t  token;   /* new variable */
@@ -231,8 +231,118 @@ void diag_get_file_info (char* fname, struct diag_files * diag_files_fortran, in
                         printf("ERROR :: SOMETHING IS WRONG \n");
                 }
         }
+/** Field stuff **/
         else if (fields_flag == 1){
+                if (strcmp(event.data.scalar.value,"name") == 0){
+                        strcpy(diags[ifields].key,"        ");
+                        strcpy(diags[ifields].key,event.data.scalar.value);
+                        ikey = 1;
+                        ivalue = 0;
+                }
+                else if (strcmp(event.data.scalar.value,"var") == 0){
+                        strcpy(diags[ifields].key,"        ");
+                        strcpy(diags[ifields].key,event.data.scalar.value);
+                        ikey = 1;
+                        ivalue = 0;
+                }
+                else if (strcmp(event.data.scalar.value,"files") == 0){
+                        strcpy(diags[ifields].key,"        ");
+                        strcpy(diags[ifields].key,event.data.scalar.value);
+                        ikey = 1;
+                        ivalue = 0;
+                }
+                else if (strcmp(event.data.scalar.value,"all") == 0){
+                        strcpy(diags[ifields].key,"        ");
+                        strcpy(diags[ifields].key,event.data.scalar.value);
+                        ikey = 1;
+                        ivalue = 0;
+                }
+                else if (strcmp(event.data.scalar.value,"reduction") == 0){
+                        strcpy(diags[ifields].key,"        ");
+                        strcpy(diags[ifields].key,event.data.scalar.value);
+                        ikey = 1;
+                        ivalue = 0;
+                }
+                else if (strcmp(event.data.scalar.value,"region") == 0){
+                        strcpy(diags[ifields].key,"        ");
+                        strcpy(diags[ifields].key,event.data.scalar.value);
+                        ikey = 1;
+                        ivalue = 0;
+                }
+                else if (strcmp(event.data.scalar.value,"kind") == 0){
+                        strcpy(diags[ifields].key,"        ");
+                        strcpy(diags[ifields].key,event.data.scalar.value);
+                        ikey = 1;
+                        ivalue = 0;
+                }
+                else if (strcmp(event.data.scalar.value,"module") == 0){
+                        strcpy(diags[ifields].key,"        ");
+                        strcpy(diags[ifields].key,event.data.scalar.value);
+                        ikey = 1;
+                        ivalue = 0;
+                }
+// Parse out the values
+                else if (strcmp(diags[ifields].key,"name") == 0 && ikey == 1){
+                        strcpy(diags[ifields].name,event.data.scalar.value);
+//                        printf("%s : %s \n",diags[ifields].key,diags[ifields].name);
+                        ikey = 0;
+                        ivalue = 1;
+                }
+                else if (strcmp(diags[ifields].key,"var") == 0 && ikey == 1){
+                        strcpy(diags[ifields].var,event.data.scalar.value);
+                        ikey = 0;
+                        ivalue = 1;
+                }
+                else if (strcmp(diags[ifields].key,"files") == 0 && ikey == 1){
+                        strcpy(diags[ifields].files,event.data.scalar.value);
+                        ikey = 0;
+                        ivalue = 1;
+                }
+                else if (strcmp(diags[ifields].key,"all") == 0 && ikey == 1){
+                        strcpy(diags[ifields].all,event.data.scalar.value);
+                        ikey = 0;
+                        ivalue = 1;
+                }
+                else if (strcmp(diags[ifields].key,"reduction") == 0 && ikey == 1){
+                        strcpy(diags[ifields].reduction,event.data.scalar.value);
+                        ikey = 0;
+                        ivalue = 1;
+                }
+                else if (strcmp(diags[ifields].key,"region") == 0 && ikey == 1){
+                        strcpy(diags[ifields].region,event.data.scalar.value);
+                        ikey = 0;
+                        ivalue = 1;
+                }
+                else if (strcmp(diags[ifields].key,"kind") == 0 && ikey == 1){
+                        strcpy(diags[ifields].skind,event.data.scalar.value);
+                        ikey = 0;
+                        ivalue = 1;
+                        /** fill in ikind **/
+                        if (strcmp(event.data.scalar.value,"double") == 0){
+                         diags[ifields].intkind = r8;
+                        }
+                        else if (strcmp(event.data.scalar.value,"float") == 0){
+                         diags[ifields].intkind = r4;
+                        }
+                        else if (strcmp(event.data.scalar.value,"integer8") == 0){
+                         diags[ifields].intkind = i8;
+                        }
+                        else if (strcmp(event.data.scalar.value,"integer") == 0){
+                         diags[ifields].intkind = i4;
+                        }
+                        else {
+                         diags[ifields].intkind = null_type_int;
+                        }
+                }
+                else if (strcmp(diags[ifields].key,"module") == 0 && ikey == 1){
+                        strcpy(diags[ifields].module,event.data.scalar.value);
+                        ikey = 0;
+                        ivalue = 1;
+                }
+                else {
 
+                        printf("ERROR :: SOMETHING IS WRONG FIELDS\n");
+                }
         }
         break;
     }
@@ -245,8 +355,9 @@ void diag_get_file_info (char* fname, struct diag_files * diag_files_fortran, in
 //printf("%s %s %s %s %d \n",dfiles[i].unlimdim, dfiles[i].frequnit, dfiles[i].name, dfiles[i].timeunit, dfiles[i].freq) ;
 
   *diag_files_fortran = dfiles[i];
+  *diag_fields_fortran = diags[i];
 //printf("%s %s %s %s %d \n",diag_files_fortran->unlimdim, diag_files_fortran->frequnit, diag_files_fortran->name, diag_files_fortran->timeunit, diag_files_fortran->freq) ;
-
+printf("%s \n",diag_fields_fortran->name);
   /* Cleanup */
   yaml_parser_delete(&parser);
   fclose(fyaml);

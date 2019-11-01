@@ -21,6 +21,7 @@ integer, parameter :: r4 = 4
 integer, parameter :: i8 = -8
 integer, parameter :: i4 = -4
 integer, parameter :: string = 19 !< s is the 19th letter of the alphabet
+integer, parameter :: null_type_int = -999
 !> Matches C struct 
 type, bind(c) :: diag_files_type
      character (c_char) :: fname (20)
@@ -32,15 +33,17 @@ type, bind(c) :: diag_files_type
 end type diag_files_type
 
 type, bind(c) :: diag_fields_type
-     character (c_char) :: fname
-     character (c_char) :: var
-     character (c_char) :: files
-     integer (c_int)    :: intkind
-     character (c_char) :: skind
-     character (c_char) :: egion
-     character (c_char) :: regcoord
-     character (c_char) :: module_location
-     character (c_char) :: key
+     character (c_char) :: fname (20)
+     character (c_char) :: var(20)
+     character (c_char) :: files(20)
+     integer (c_int)    :: ikind
+     character (c_char) :: skind(20)
+     character (c_char) :: reduction(20)
+     character (c_char) :: all_all(4)
+     character (c_char) :: region(50)
+     character (c_char) :: regcoord(50)
+     character (c_char) :: module_location(20)
+     character (c_char) :: key(8)
 end type diag_fields_type
 !> Placeholder for fms2_io file object type.
 type fms_io_obj
