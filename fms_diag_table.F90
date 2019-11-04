@@ -35,7 +35,7 @@ interface
         integer(c_int)          :: ifields_p !< The number of fields liste in the diag_yaml
  end subroutine diag_num_files
 !> Fills in the information from the diag_yaml related to the diag_file_type  
- subroutine diag_get_file_info (fname, diag_files_fortran,diag_fields_fortran,i) bind(C, name="diag_get_file_info")
+ subroutine diag_get_file_info (fname, diag_files_fortran,diag_fields_fortran,i,j) bind(C, name="diag_get_file_info")
         use iso_c_binding
         import
         character(kind=c_char) :: fname !< The name of the diag_yaml file
@@ -43,6 +43,7 @@ interface
         type(diag_fields_type) :: diag_fields_fortran !< Matches the struct filled in with the diag_file_info
 !        type(c_ptr) :: diag_files_fortran
         integer(c_int),value :: i !< The index of the diag_file array
+        integer(c_int),value :: j !< The index of the diag_field array
 
  end subroutine diag_get_file_info
 end interface
@@ -58,7 +59,7 @@ character(len=*), intent(in)            :: diag_yaml_name        !< The name of 
 logical         , intent(in), optional  :: verb                  !< If true, more output is printed
 logical                                 :: verbose               !< If true, more output is printed
 integer                                 :: c_err                 !< Error code from C function
-integer                                 :: i                     !< Indexing integer
+integer                                 :: i,j                   !< Indexing integer
 character(len=:),allocatable            :: char1, char2          !< Utility strings
 if (present(verb)) then
      verbose = verb
@@ -93,9 +94,21 @@ endif
  allocate(diag_files(num_diag_files) )
  allocate(diag_fields(num_diag_fields) )
 !> get the diag_yaml file info
-do i = 1,num_diag_files
-  call diag_get_file_info(trim(diag_yaml_name)//c_null_char, diag_files(i),diag_fields(i), i-1)
-enddo
+ if (num_diag_files >= num_diag_fields) then
+     j = 0
+     do i = 1,num_diag_files
+          j = j + 1
+          if (j > num_diag_fields) j = num_diag_fields
+          call diag_get_file_info(trim(diag_yaml_name)//c_null_char, diag_files(i),diag_fields(j), i-1, j-1)
+     enddo
+ else
+     i = 0
+     do j = 1,num_diag_fields
+          i = i+1
+          if (i > num_diag_files) i = num_diag_files
+          call diag_get_file_info(trim(diag_yaml_name)//c_null_char, diag_files(i),diag_fields(j), i-1, j-1)
+     enddo     
+ endif
 !> Initialize the NULL types
 null_field_type%ikind = -999
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

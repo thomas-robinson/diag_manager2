@@ -97,7 +97,7 @@ void diag_num_files (char* fname, int* ifiles_p, int* ifields_p)
 
 }
 
-void diag_get_file_info (char* fname, struct diag_files * diag_files_fortran, struct diag_fields * diag_fields_fortran, int i)
+void diag_get_file_info (char* fname, struct diag_files * diag_files_fortran, struct diag_fields * diag_fields_fortran, int i, int j)
 {
 
     yaml_token_t  token;   /* new variable */
@@ -355,7 +355,7 @@ void diag_get_file_info (char* fname, struct diag_files * diag_files_fortran, st
 //printf("%s %s %s %s %d \n",dfiles[i].unlimdim, dfiles[i].frequnit, dfiles[i].name, dfiles[i].timeunit, dfiles[i].freq) ;
 
   *diag_files_fortran = dfiles[i];
-  *diag_fields_fortran = diags[i];
+  *diag_fields_fortran = diags[j];
 //printf("%s %s %s %s %d \n",diag_files_fortran->unlimdim, diag_files_fortran->frequnit, diag_files_fortran->name, diag_files_fortran->timeunit, diag_files_fortran->freq) ;
 printf("%s \n",diag_fields_fortran->name);
   /* Cleanup */

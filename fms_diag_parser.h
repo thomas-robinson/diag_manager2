@@ -26,8 +26,8 @@ typedef struct diag_fields {
      char key [8];
 } fields;
 
- struct diag_files dfiles[64];
- struct diag_fields diags[64];
+ struct diag_files dfiles[5];
+ struct diag_fields diags[3];
  yaml_event_t event;
  yaml_parser_t parser ;
 
