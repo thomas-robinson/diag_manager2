@@ -1,9 +1,12 @@
 module fms_diag_data_mod
 
 use iso_c_binding
+use mpi
 implicit none
-include 'mpif.h'
 
+!include 'mpif.h'
+
+integer, parameter :: diag_null = -999
 !> Supported averaging intervals
 integer, parameter :: monthly = 30
 integer, parameter :: daily = 24 
@@ -98,7 +101,7 @@ endif
 
 if (lev==fatal) then
   if (mpi_on) then
-     call MPI_ABORT
+     call MPI_ABORT(MPI_COMM_WORLD,-1,ierr)
   else
      stop
   endif

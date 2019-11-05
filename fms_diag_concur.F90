@@ -1,7 +1,9 @@
 module fms_diag_concur_mod
    use fms_diag_data_mod, only: diag_error, fatal, warning, note
+   use mpi
    implicit none
-   include 'mpif.h'
+
+!   include 'mpif.h'
 
 
 
