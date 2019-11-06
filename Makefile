@@ -4,9 +4,9 @@
 #FTN=mpif90
 #CC=mpicc
 #MPFTN=mpif90
-FFLAGS=-no-wrap-margin -traceback #-stand f18 #-warn all -stand f18 #-g -traceback #-warn all
+FFLAGS=-no-wrap-margin -traceback -stand f18 #-warn all #-g 
 #FFLAGS=-Wall -std=f2008
-INCLUDE=-Ilibyaml/include -I. -I/opt/intel/2019_up5/impi/2019.5.281/intel64/include
+INCLUDE=-Ilibyaml/include -I. -I/opt/intel/2019_up5/impi/2019.5.281/intel64/include -I/opt/intel/2019_up5/impi/2019.5.281/intel64/include/
 CFLAGS=-g -traceback
 #CFLAGS=-g
 LIB=-L/home/Thomas.Robinson/diag_manager2/libyaml/src/.libs -L/opt/intel/2019_up5/impi/2019.5.281/intel64/lib
@@ -17,7 +17,7 @@ GCC=gcc
 GINCLUDE=
 GLIB=
 
-fms_diag_manager_test.x: fms_diag_manager2.o fms_diag_register.o fms_diag_table.F90 fms_diag_concur.o fms_diag_data.o fms_diag_parse.o fms_c_to_fortran.o
+fms_diag_manager_test.x: fms_diag_manager2.o fms_diag_register.o fms_diag_object.o fms_diag_table.F90 fms_diag_concur.o fms_diag_data.o fms_diag_parse.o fms_c_to_fortran.o
 #	$(MPFTN) $(INCLUDE) $(LIB) $(FFLAGS) $(l) $^ test/diag_manager2/diag_manager_test1.F90 -o $@
 #	mpirun -n 6 ./$@ : -n 7 ./$@
 #	mpirun -n 6 ./$@
@@ -40,14 +40,16 @@ parser_test: parser.x
 	make clean
 diag_table_test.x: fms_diag_parse.o fms_diag_table.o 
 	$(FTN) $(INCLUDE) $(LIB) $(l) $(FFLAGS) $^  test/diag_table_test.F90 -o $@
-fms_diag_manager2.o:fms_diag_register.o fms_diag_table.o fms_diag_data.o fms_diag_concur.o
+fms_diag_manager2.o:fms_diag_register.o fms_diag_object.o fms_diag_table.o fms_diag_data.o fms_diag_concur.o
 	$(MPFTN) $(INCLUDE) $(LIB) $(l) $(FFLAGS) $^ fms_diag_manager2.F90 -c 
-fms_diag_register.o: fms_diag_data.o
+fms_diag_register.o: fms_diag_object.o fms_diag_concur.o fms_diag_data.o 
 	$(MPFTN) $(INCLUDE) $(LIB) $(l) $(FFLAGS) $^ fms_diag_register.F90 -c
 fms_diag_table.o: fms_diag_parse.o fms_diag_data.o fms_c_to_fortran.o
 	$(FTN) $(INCLUDE) $(LIB) $(l) $(FFLAGS) $^ fms_diag_table.F90 -c 
 fms_diag_data.o: 
 	$(FTN) $(INCLUDE) $(LIB) $(l) $(FFLAGS) $^ fms_diag_data.F90 -c 
+fms_diag_object.o: fms_diag_table.o fms_diag_data.o
+	$(MPFTN) $(INCLUDE) $(LIB) $(l) $(FFLAGS) $^ fms_diag_object.F90 -c
 fms_diag_parse.o:
 	$(CC)  $(INCLUDE) $(LIB) $(l) $(CFLAGS) $^ fms_diag_parse.c -c 
 fms_diag_concur.o: fms_diag_data.o
