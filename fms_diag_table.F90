@@ -31,8 +31,8 @@ interface
  subroutine diag_num_files (fname, ifiles_p, ifields_p) bind(C, name="diag_num_files")
         use iso_c_binding
         character(kind=c_char)  :: fname !< The name of the diag_yaml file
-        integer(c_int)          :: ifiles_p !< The number of files liste in the diag_yaml
-        integer(c_int)          :: ifields_p !< The number of fields liste in the diag_yaml
+        integer(c_int)          :: ifiles_p !< The number of files listed in the diag_yaml
+        integer(c_int)          :: ifields_p !< The number of fields listed in the diag_yaml
  end subroutine diag_num_files
 !> Fills in the information from the diag_yaml related to the diag_file_type  
  subroutine diag_get_file_info (fname, diag_files_fortran,diag_fields_fortran,i,j) bind(C, name="diag_get_file_info")
