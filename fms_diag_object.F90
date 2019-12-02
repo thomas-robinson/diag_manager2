@@ -39,7 +39,7 @@ end interface
 type fms_diag_object
      type (diag_fields_type)                           :: diag_field         !< info from diag_table
      type (diag_files_type),allocatable, dimension(:)  :: diag_file          !< info from diag_table
-     integer, private                                 :: diag_id           !< unique id for varable
+     integer, allocatable, private                    :: diag_id           !< unique id for varable
 !     class (fms_io_obj), allocatable, dimension(:)    :: fms_fileobj        !< fileobjs
      character(len=:), allocatable, dimension(:)      :: metadata          !< metedata for the variable
      logical, private                                 :: static         !< true is this is a static var
@@ -233,76 +233,160 @@ end function fms_diag_id_inq
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! Operator Overrides !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !> \brief override for checking if object ID is greater than an integer (IDs)
+!> @note unalloacted obj is assumed to equal diag_not_registered
 pure logical function obj_gt_int (obj,i) result(ll)
- class (fms_diag_object), intent(in) :: obj
+ class (fms_diag_object), intent(in), allocatable :: obj
  integer,                 intent(in) :: i
+  if (.not.allocated(obj) .and. i >= diag_not_registered) then
+     ll = .false.
+  elseif (.not.allocated(obj) ) then
+     ll = .false.
+  else
      ll = (obj%diag_id > i)
+  endif
 end function obj_gt_int
 !> \brief override for checking if integer (ID) is greater than an object ID
+!> @note unalloacted obj is assumed to equal diag_not_registered
 pure logical function int_gt_obj (i,obj) result(ll)
- class (fms_diag_object), intent(in) :: obj
+ class (fms_diag_object), intent(in), allocatable :: obj
  integer,                 intent(in) :: i
+  if (.not.allocated(obj) .and. i <= diag_not_registered) then
+     ll = .false.
+  elseif (.not.allocated(obj)) then
+     ll = .true.
+  else
      ll = (i > obj%diag_id)
+  endif
 end function int_gt_obj
 !> \brief override for checking if object ID is less than an integer (IDs)
+!> @note unalloacted obj is assumed to equal diag_not_registered
 pure logical function obj_lt_int (obj,i) result(ll)
- class (fms_diag_object), intent(in) :: obj
+ class (fms_diag_object), intent(in), allocatable :: obj
  integer,                 intent(in) :: i
+  if (.not.allocated(obj) .and. i > diag_not_registered) then
+     ll = .true.
+  elseif (.not.allocated(obj)) then
+     ll = .false.
+  else
      ll = (obj%diag_id < i)
+  endif
 end function obj_lt_int
 !> \brief override for checking if integer (ID) is less than an object ID
+!> @note unalloacted obj is assumed to equal diag_not_registered
 pure logical function int_lt_obj (i,obj) result(ll)
- class (fms_diag_object), intent(in) :: obj
+ class (fms_diag_object), intent(in), allocatable :: obj
  integer,                 intent(in) :: i
+  if (.not.allocated(obj) .and. i >= diag_not_registered) then
+     ll = .false.
+  elseif (.not.allocated(obj)) then
+     ll = .true.
+  else
      ll = (i < obj%diag_id)
+  endif
 end function int_lt_obj
 !> \brief override for checking if object ID is greater than or equal to an integer (IDs)
+!> @note unalloacted obj is assumed to equal diag_not_registered
 pure logical function obj_ge_int (obj,i) result(ll)
- class (fms_diag_object), intent(in) :: obj
+ class (fms_diag_object), intent(in), allocatable :: obj
  integer,                 intent(in) :: i
+  if (.not.allocated(obj) .and. i <= diag_not_registered) then
+     ll = .true.
+  elseif (.not.allocated(obj) ) then
+     ll = .false.
+  else
      ll = (obj%diag_id >= i)
+  endif
 end function obj_ge_int
 !> \brief override for checking if integer (ID) is greater than or equal to an object ID
+!> @note unalloacted obj is assumed to equal diag_not_registered
 pure logical function int_ge_obj (i,obj) result(ll)
- class (fms_diag_object), intent(in) :: obj
+ class (fms_diag_object), intent(in), allocatable :: obj
  integer,                 intent(in) :: i
+  if (.not.allocated(obj) .and. i >= diag_not_registered) then
+     ll = .true.
+  elseif (.not.allocated(obj) ) then
+     ll = .false.
+  else
      ll = (i >= obj%diag_id)
+  endif
 end function int_ge_obj
 !> \brief override for checking if object ID is less than or equal to an integer (IDs)
+!> @note unalloacted obj is assumed to equal diag_not_registered
 pure logical function obj_le_int (obj,i) result(ll)
- class (fms_diag_object), intent(in) :: obj
+ class (fms_diag_object), intent(in), allocatable :: obj
  integer,                 intent(in) :: i
+  if (.not.allocated(obj) .and. i >= diag_not_registered) then
+     ll = .true.
+  elseif (.not.allocated(obj) ) then
+     ll = .false.
+  else
      ll = (obj%diag_id <= i)
+  endif
 end function obj_le_int
 !> \brief override for checking if integer (ID) is less than or equal to an object ID
+!> @note unalloacted obj is assumed to equal diag_not_registered
 pure logical function int_le_obj (i,obj) result(ll)
- class (fms_diag_object), intent(in) :: obj
+ class (fms_diag_object), intent(in), allocatable :: obj
  integer,                 intent(in) :: i
+  if (.not.allocated(obj) .and. i <= diag_not_registered) then
+     ll = .true.
+  elseif (.not.allocated(obj) ) then
+     ll = .false.
+  else
      ll = (i <= obj%diag_id)
+  endif
 end function int_le_obj
 !> \brief override for checking if object ID is equal to an integer (IDs)
+!> @note unalloacted obj is assumed to equal diag_not_registered
 pure logical function obj_eq_int (obj,i) result(ll)
- class (fms_diag_object), intent(in) :: obj
+ class (fms_diag_object), intent(in), allocatable :: obj
  integer,                 intent(in) :: i
+  if (.not.allocated(obj) .and. i == diag_not_registered) then
+     ll = .true.
+  elseif (.not.allocated(obj) ) then
+     ll = .false.
+  else 
      ll = (obj%diag_id == i)
+  endif
 end function obj_eq_int
 !> \brief override for checking if integer (ID) is equal to an object ID
+!> @note unalloacted obj is assumed to equal diag_not_registered
 pure logical function int_eq_obj (i,obj) result(ll)
- class (fms_diag_object), intent(in) :: obj
+ class (fms_diag_object), intent(in), allocatable :: obj
  integer,                 intent(in) :: i
+  if (.not.allocated(obj) .and. i == diag_not_registered) then
+     ll = .true.
+  elseif (.not.allocated(obj) ) then
+     ll = .false.
+  else 
      ll = (i == obj%diag_id)
+  endif
 end function int_eq_obj
 !> \brief override for checking if object ID is not equal to an integer (IDs)
+!> @note unalloacted obj is assumed to equal diag_not_registered
 pure logical function obj_ne_int (obj,i) result(ll)
- class (fms_diag_object), intent(in) :: obj
+ class (fms_diag_object), intent(in), allocatable :: obj
  integer,                 intent(in) :: i
+  if (.not.allocated(obj) .and. i == diag_not_registered) then
+     ll = .false.
+  elseif (.not.allocated(obj) ) then
+     ll = .true.
+  else
      ll = (obj%diag_id .ne. i)
+  endif
 end function obj_ne_int
 !> \brief override for checking if integer (ID) is not equal to an object ID
+!> @note unalloacted obj is assumed to equal diag_not_registered
 pure logical function int_ne_obj (i,obj) result(ll)
- class (fms_diag_object), intent(in) :: obj
+ class (fms_diag_object), intent(in), allocatable :: obj
  integer,                 intent(in) :: i
+  if (.not.allocated(obj) .and. i == diag_not_registered) then
+     ll = .false.
+  elseif (.not.allocated(obj) ) then
+     ll = .true.
+  else
      ll = (i .ne. obj%diag_id)
+  endif
 end function int_ne_obj
 
 

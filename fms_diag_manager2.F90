@@ -14,6 +14,7 @@ use fms_diag_object_mod, only: fms_diag_object_scalar, fms_diag_object_1d, &
                                fms_diag_object_2d, fms_diag_object_3d, fms_diag_object_4d, &
                                fms_diag_object_5d
 use fms_diag_object_mod, only: fms_diag_object
+use fms_diag_send_data_mod, only: send_data
 
 implicit none
 
@@ -26,8 +27,10 @@ logical :: diag_concurrent = .false. !< When true, run the diagnostics concurren
 integer :: MAX_LEN_VARNAME = 20 !< The size of the string of the varname
 integer :: MAX_LEN_META = 30 !< The size of the string of each metadata
 integer :: MAX_DIAG_VARS = 1024 !< The maximum number of diag variables
+logical :: unique_ids = .false. !< Flag if set to true will give each diagnostic a unique ID number. These 
+                                !! numbers are limited to MAX_DIAG_VARS
 namelist/diag_manager_nml/verbose,diag_table_name,diag_pes,diag_concurrent,MAX_LEN_VARNAME, &
-& MAX_LEN_META, MAX_DIAG_VARS
+& MAX_LEN_META, MAX_DIAG_VARS, unique_ids
 
 character(len=9) :: read_nml_file="input.nml"
 type(fms_diag_comm_type) :: diag_comm !< The diag communicator
@@ -40,13 +43,14 @@ type(fms_diag_comm_type) :: diag_comm !< The diag communicator
 public :: fms_diag_manager_init
 public :: fms_diag_object_scalar, fms_diag_object_1d
 public :: fms_diag_object_2d, fms_diag_object_3d, fms_diag_object_4d, fms_diag_object_5d
+public :: send_data
 public :: operator (>), operator (<), operator (>=), operator (<=), operator (==), operator (.ne.)
 private :: diag_comm, diag_error
 private :: diag_files_type, diag_fields_type
 private :: monthly, daily, diurnal, yearly, no_diag_avergaing, instantaneous
 private :: three_hourly, six_hourly, r8, r4, i8, i4, string
 private :: diag_comm_init, fms_write_diag_comm, fms_diag_comm_type
-
+private :: unique_reg_ids
 contains
 !> \brief Reads the diag namelist and runs all diag_manage initialization routines
 subroutine fms_diag_manager_init
@@ -60,7 +64,7 @@ open(unit=29,file=read_nml_file,status="old")
 read (29, nml=diag_manager_nml, iostat=io_error)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !> Set up the diag_id lists
- call fms_register_diag_init(MAX_DIAG_VARS)
+ call fms_register_diag_init(MAX_DIAG_VARS, unique_ids)
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !> Initialize and check if a diag_comm will be used
@@ -82,67 +86,7 @@ end subroutine fms_diag_manager_init
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-!> \descrption The user API for diag_manager is send_data.  Users pass their variable object to 
-!! this routine, and magic happens.  Send data 
-subroutine fms_send_data (diagobj, var, time, is_in, js_in, ks_in, mask, &
-                                   rmask, ie_in, je_in, ke_in, weight, err_msg)
- class (fms_diag_object),target, intent(inout), allocatable :: diagobj !< The diag variable object
- class(*), dimension(:,:,:)   , intent(in) , target         :: var !< The variable
- class(*), dimension(:,:,:)   ,              pointer        :: vptr => NULL() !< A pointer to the data
- integer, optional            , intent(in)                  :: time !< A time place holder
- integer, optional            , intent(in)                  :: is_in !< Start of the first dimension
- integer, optional            , intent(in)                  :: js_in !< Start of the second dimension
- integer, optional            , intent(in)                  :: ks_in !< Start of the third dimension
- integer, optional            , intent(in)                  :: ie_in !< End of the first dimension
- integer, optional            , intent(in)                  :: je_in !< End of the second dimension
- integer, optional            , intent(in)                  :: ke_in !< End of the third dimension
- logical, optional            , intent(in)                  :: mask !< A lask for point to ignore
- real   , optional            , intent(in)                  :: rmask !< I DONT KNOW
- real   , optional            , intent(in)                  :: weight !< Something for averaging?
- CHARACTER(len=*)             , INTENT(out), OPTIONAL       :: err_msg
-! local vars
- class (fms_diag_object)      , pointer                     :: dptr => NULL()
- type (fms_diag_object_scalar), allocatable                 :: dsc
- type (fms_diag_object_1d), allocatable                     ::  d1d
- type (fms_diag_object_2d), allocatable                     ::  d2d
-! type (fms_diag_object_3d), allocatable                     ::  d3d
- class (fms_diag_object), allocatable                     ::  d3d
- type (fms_diag_object_4d), allocatable                     ::  d4d
- type (fms_diag_object_5d), allocatable                     ::  d5d
-!> "Point at diag obj" 
- dptr => diagobj
 
-!> If this is the 
-!> 
- select type (dptr)
-     type is (fms_diag_object)
-!> Switch the diagobj to a 3d
-          d3d = null_3d
-          call dptr%copy(d3d)
-          deallocate(diagobj)
-          diagobj = null_3d
-          call d3d%copy(diagobj)
- end select
- if (associated(dptr)) nullify(dptr)
-
-  vptr => var
-  select type (vptr)
-     type is (real(kind=8))
-!          diagobj%vartype = r8
-     type is (real(kind=4))
-!          diagobj%vartype = r4
-     type is (integer(kind=8))
-!          diagobj%vartype = i8
-     type is (integer(kind=4))
-!          diagobj%vartype = i4
-     type is (character(*))
-!          diagobj%vartype = string
-     class default
-!          call diag_error("fms_register_diag_field_obj","The type of "//trim(diagobj%varname)//&
-!          " is not supported", FATAL)
-  end select
-
-end subroutine fms_send_data
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 

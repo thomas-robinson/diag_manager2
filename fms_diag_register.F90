@@ -20,19 +20,25 @@ end interface fms_register_diag_field
 
 integer, allocatable :: diag_var_id_list (:) !< A list of potential diag IDs
 integer, allocatable :: diag_var_id_used (:) !< A list of used diag IDs
-
+logical :: unique_reg_ids
 CONTAINS
-subroutine fms_register_diag_init(max_vars)
+subroutine fms_register_diag_init(max_vars, unique_ids)
 integer, intent(in) :: max_vars
+logical, intent(in) :: unique_ids
 integer :: i
-allocate (integer :: diag_var_id_list (MAX_VARS))
-allocate (integer :: diag_var_id_used (MAX_VARS))
+if (unique_ids) then
+  unique_reg_ids = .true.
+  allocate (integer :: diag_var_id_list (MAX_VARS))
+  allocate (integer :: diag_var_id_used (MAX_VARS))
 
 !OMP PARALLEL DO shared(diag_var_id_list,diag_var_id_used, max_vars)
-do i = 1 , MAX_VARS
+  do i = 1 , MAX_VARS
      diag_var_id_list(i) = i
      diag_var_id_used(i) = 0
-enddo
+  enddo
+else
+ unique_reg_ids = .false.
+endif
 end subroutine fms_register_diag_init
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !> \description A generic routine to register a diagnostic field.  Here we allocate an unallocated 
@@ -55,6 +61,7 @@ end subroutine fms_register_diag_init
 !> Register the diag_object.  This call has no axis
  call diagob%register_meta(modname, varname, axes, time, longname, units, missing_value, metadata) 
 !> Get an ID number for the diagnostic 
+ if (unique_reg_ids) then
   do i = 1,max_diag_vars
      if (diag_var_id_used (i) == 0) then 
           diag_var_id_used(i) = diag_var_id_list(i)
@@ -66,6 +73,9 @@ end subroutine fms_register_diag_init
            "Please increase by setting MAX_DIAG_VARS in the diag_manager_nml",FATAL)
      endif
   enddo
+ else
+  diag_id = diag_registered_id
+ endif
  call diagob%setID(diag_id)
  call diagob%is_registered(.true.)
 end function fms_register_diag_field_generic
@@ -87,6 +97,7 @@ end function fms_register_diag_field_generic
  call diagob%register_meta(modname, varname, time=time, longname=longname, units=units, &
                            missing_value=missing_value, metadata=metadata) 
 !> Get an ID number for the diagnostic 
+ if (unique_reg_ids) then
   do i = 1,max_diag_vars
      if (diag_var_id_used (i) == 0) then 
           diag_var_id_used(i) = diag_var_id_list(i)
@@ -98,6 +109,9 @@ end function fms_register_diag_field_generic
            "Please increase by setting MAX_DIAG_VARS in the diag_manager_nml",FATAL)
      endif
   enddo
+ else
+  diag_id = diag_registered_id
+ endif
  call diagob%setID(diag_id)
  call diagob%is_registered(.true.)
 end function fms_register_diag_field_scalar

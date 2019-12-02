@@ -7,6 +7,9 @@ implicit none
 !include 'mpif.h'
 
 integer, parameter :: diag_null = -999
+integer, parameter :: diag_not_found = -1
+integer, parameter :: diag_not_registered = 0
+integer, parameter :: diag_registered_id = 10
 !> Supported averaging intervals
 integer, parameter :: monthly = 30
 integer, parameter :: daily = 24 
