@@ -1,7 +1,16 @@
 module fms_diag_send_data_mod
 use fms_diag_object_mod
-!> \descrption The user API for diag_manager is send_data.  Users pass their variable object to 
+!> \descrption The user API for diag_manager is send_data.  Users pass their variable object to
 !! this routine, and magic happens.
+!! - On the first call, the diag object is converted to the correct type to allow for bufferring.
+!! - If the input data are static, they are written to the file(s) they are supposed to go to.  Subsequent
+!! send data calls will be ignored (a quick return).
+!! - The optional arguments are all handled and checked.
+!! - Data is buffered in the diag object.  This object is carried by the model component sending the data.
+!! - Averaging routines are called to preform the correct calculations if there is averaging.  
+!! - Data is written to the appropriate file at the appropriate time.  The averaged data is not buffered.
+!! - If no more averaging needs to be done on a given set of data, then the data buffer is deallocated. 
+!! (example: a veriable is written out on a monthly basis, and the model has reached the end of the month)
 interface send_data
      module procedure fms_send_datascalar
      module procedure fms_send_data1d
@@ -29,11 +38,16 @@ subroutine fms_send_datascalar(diagobj, var)
  class(*)                      , intent(in) ,   target      :: var !< The variable
  class(*)                      ,                pointer     :: vptr => NULL() !< A pointer to the data
 
+!> If the diagnostic object is not allocated, then return withut doing anything
+ if (.not.allocated( diagobj )) return
 end subroutine fms_send_datascalar
 subroutine fms_send_data1d(diagobj, var)
  class (fms_diag_object),target, intent(inout), allocatable :: diagobj !< The diag variable object
  class(*), dimension(:)       , intent(in) , target         :: var !< The variable
  class(*), dimension(:)       ,              pointer        :: vptr => NULL() !< A pointer to the data
+
+!> If the diagnostic object is not allocated, then return
+ if (.not.allocated( diagobj )) return
 !> If this is the first call in, set the type to be fms_diag_object_1d
  call switch_to_right_type(diagobj, null_1d)
 
@@ -56,6 +70,9 @@ subroutine fms_send_data4d(diagobj, var, time, is_in, js_in, ks_in, mask, &
  CHARACTER(len=*)             , INTENT(out), OPTIONAL       :: err_msg
 ! local vars
  class (fms_diag_object)      , pointer                     :: dptr => NULL()
+
+!> If the diagnostic object is not allocated, then return
+ if (.not.allocated( diagobj )) return
 !> If this is the first call in, set the type to be fms_diag_object_4d
  call switch_to_right_type(diagobj, null_4d)
 
@@ -78,6 +95,9 @@ subroutine fms_send_data5d(diagobj, var, time, is_in, js_in, ks_in, mask, &
  CHARACTER(len=*)             , INTENT(out), OPTIONAL       :: err_msg
 ! local vars
  class (fms_diag_object)      , pointer                     :: dptr => NULL()
+
+!> If the diagnostic object is not allocated, then return
+ if (.not.allocated( diagobj )) return
 !> If this is the first call in, set the type to be fms_diag_object_5d
  call switch_to_right_type(diagobj, null_5d)
 
@@ -127,6 +147,8 @@ subroutine fms_send_data3d (diagobj, var, time, is_in, js_in, ks_in, mask, &
 ! local vars
  class (fms_diag_object)      , pointer                     :: dptr => NULL()
 !
+!> If the diagnostic object is not allocated, then return
+ if (.not.allocated( diagobj )) return
 !> If this is the first call in, set the type to be fms_diag_object_3d
  call switch_to_right_type(diagobj, null_3d)
 
@@ -162,4 +184,9 @@ subroutine set_var_in_type(input,output)
  class(*) input
 end subroutine set_var_in_type
 
+function obj_allocated( diagobj ) return (reg)
+  class (fms_diag_object) intent(in), allocatable :: diagobj !< The diag variable object
+  logical :: reg
+
+  reg = allocated(diagobj)
 end module fms_diag_send_data_mod
