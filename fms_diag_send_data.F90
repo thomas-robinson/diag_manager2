@@ -184,9 +184,5 @@ subroutine set_var_in_type(input,output)
  class(*) input
 end subroutine set_var_in_type
 
-function obj_allocated( diagobj ) return (reg)
-  class (fms_diag_object) intent(in), allocatable :: diagobj !< The diag variable object
-  logical :: reg
 
-  reg = allocated(diagobj)
 end module fms_diag_send_data_mod
