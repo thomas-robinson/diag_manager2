@@ -10,10 +10,13 @@ pure function fms_c2f_string (cstring) result(fstring)
  integer :: i
  length = 1
 ! call c_f_pointer (cstring,
- do 
-     if (cstring(length) == c_null_char) exit
+ c_loop: do 
+     if (cstring(length) == c_null_char) then
+          length = length - 1
+          exit c_loop
+     endif
      length = length + 1
- enddo
+ enddo c_loop
  allocate(character(len=length) :: fstring)
  do i = 1,length
      fstring(i:i) = cstring(i)
