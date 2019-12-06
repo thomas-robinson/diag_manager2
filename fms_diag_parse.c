@@ -357,7 +357,7 @@ void diag_get_file_info (char* fname, struct diag_files * diag_files_fortran, st
   *diag_files_fortran = dfiles[i];
   *diag_fields_fortran = diags[j];
 //printf("%s %s %s %s %d \n",diag_files_fortran->unlimdim, diag_files_fortran->frequnit, diag_files_fortran->name, diag_files_fortran->timeunit, diag_files_fortran->freq) ;
-printf("%s \n",diag_fields_fortran->name);
+///printf("%s \n",diag_fields_fortran->name);
   /* Cleanup */
   yaml_parser_delete(&parser);
   fclose(fyaml);

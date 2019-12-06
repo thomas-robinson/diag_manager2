@@ -2,7 +2,7 @@ module fms_diag_register_mod
 
 use fms_diag_data_mod, only: diag_files_type, diag_fields_type
 use fms_diag_data_mod, only: monthly, daily, diurnal, yearly, no_diag_avergaing, instantaneous, &
-     three_hourly, six_hourly, r8, r4, i8, i4, string
+     three_hourly, six_hourly, r8, r4, i8, i4, string, diag_registered_id
 use fms_diag_data_mod, only: diag_error,fatal,note,warning
 
 use fms_diag_concur_mod, only: diag_comm_init, fms_write_diag_comm, fms_diag_comm_type
@@ -10,7 +10,7 @@ use fms_diag_table_mod !get_diag_table_field
 
 use fms_diag_object_mod
 
-
+implicit none
 
 interface fms_register_diag_field
      module procedure fms_register_diag_field_generic
@@ -20,6 +20,7 @@ end interface fms_register_diag_field
 
 integer, allocatable :: diag_var_id_list (:) !< A list of potential diag IDs
 integer, allocatable :: diag_var_id_used (:) !< A list of used diag IDs
+integer, allocatable :: MAX_DIAG_VARS_TOTAL
 logical :: unique_reg_ids
 CONTAINS
 subroutine fms_register_diag_init(max_vars, unique_ids)
@@ -36,6 +37,7 @@ if (unique_ids) then
      diag_var_id_list(i) = i
      diag_var_id_used(i) = 0
   enddo
+  MAX_DIAG_VARS_TOTAL = MAX_VARS
 else
  unique_reg_ids = .false.
 endif
@@ -55,20 +57,22 @@ end subroutine fms_register_diag_init
  character(*)               , intent(in), optional     :: units  !< Units of the variable
  integer                    , intent(in), optional     :: missing_value !< A missing value to be used 
  character(*), dimension(:) , intent(in), optional     :: metadata
- integer :: diag_id
+ integer :: diag_id !< The diagnostic ID
+ integer :: i !< For looping 
 !> Initialize the object
  call diagob%init_ob()
-!> Register the diag_object.  This call has no axis
- call diagob%register_meta(modname, varname, axes, time, longname, units, missing_value, metadata) 
 !> Get an ID number for the diagnostic 
  if (unique_reg_ids) then
-  do i = 1,max_diag_vars
+  if (.not.allocated(max_diag_vars_total)) call diag_error("fms_register_diag_field_obj","There is "//&
+           "an error in setting up the maximum number of diagnostics.  You should set "//&
+           "unique_reg_ids=.false. in the diag_manager_nml to avoid this.", FATAL)
+  do i = 1,max_diag_vars_total
      if (diag_var_id_used (i) == 0) then 
           diag_var_id_used(i) = diag_var_id_list(i)
           diag_id = diag_var_id_list(i)
           exit
      endif
-     if (i == max_diag_vars) then
+     if (i == max_diag_vars_total) then
           call diag_error("fms_register_diag_field_obj","You have registered too many diagnostics."//&
            "Please increase by setting MAX_DIAG_VARS in the diag_manager_nml",FATAL)
      endif
@@ -77,6 +81,8 @@ end subroutine fms_register_diag_init
   diag_id = diag_registered_id
  endif
  call diagob%setID(diag_id)
+ !> Register the diag_object.  This call has no axis
+ call diagob%register_meta(modname, varname, axes, time, longname, units, missing_value, metadata) 
  call diagob%is_registered(.true.)
 end function fms_register_diag_field_generic
 !> \description A register routine for a scalar.  The scalar does not have any axis information, which is 
@@ -90,7 +96,8 @@ end function fms_register_diag_field_generic
  character(*)               , intent(in), optional     :: units  !< Units of the variable
  integer                    , intent(in), optional     :: missing_value !< A missing value to be used 
  character(*), dimension(:) , intent(in), optional     :: metadata
- integer :: diag_id
+ integer :: diag_id !< The diagnostic ID
+ integer :: i !< For looping 
 !> Initialize the object
  call diagob%init_ob()
 !> Register the diag_object.  This call has no axis
@@ -98,13 +105,13 @@ end function fms_register_diag_field_generic
                            missing_value=missing_value, metadata=metadata) 
 !> Get an ID number for the diagnostic 
  if (unique_reg_ids) then
-  do i = 1,max_diag_vars
+  do i = 1,max_diag_vars_total
      if (diag_var_id_used (i) == 0) then 
           diag_var_id_used(i) = diag_var_id_list(i)
           diag_id = diag_var_id_list(i)
           exit
      endif
-     if (i == max_diag_vars) then
+     if (i == max_diag_vars_total) then
           call diag_error("fms_register_diag_field_obj","You have registered too many diagnostics."//&
            "Please increase by setting MAX_DIAG_VARS in the diag_manager_nml",FATAL)
      endif
