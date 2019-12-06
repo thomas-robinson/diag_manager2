@@ -23,6 +23,7 @@ integer, allocatable :: diag_var_id_used (:) !< A list of used diag IDs
 integer, allocatable :: MAX_DIAG_VARS_TOTAL
 logical :: unique_reg_ids
 CONTAINS
+!> \Description Sets up the diag_ids 
 subroutine fms_register_diag_init(max_vars, unique_ids)
 integer, intent(in) :: max_vars
 logical, intent(in) :: unique_ids
@@ -62,7 +63,7 @@ end subroutine fms_register_diag_init
 !> Initialize the object
  call diagob%init_ob()
 !> Get an ID number for the diagnostic 
- if (unique_reg_ids) then
+ uid: if (unique_reg_ids) then
   if (.not.allocated(max_diag_vars_total)) call diag_error("fms_register_diag_field_obj","There is "//&
            "an error in setting up the maximum number of diagnostics.  You should set "//&
            "unique_reg_ids=.false. in the diag_manager_nml to avoid this.", FATAL)
@@ -77,9 +78,9 @@ end subroutine fms_register_diag_init
            "Please increase by setting MAX_DIAG_VARS in the diag_manager_nml",FATAL)
      endif
   enddo
- else
+ else uid
   diag_id = diag_registered_id
- endif
+ endif uid
  call diagob%setID(diag_id)
  !> Register the diag_object.  This call has no axis
  call diagob%register_meta(modname, varname, axes, time, longname, units, missing_value, metadata) 

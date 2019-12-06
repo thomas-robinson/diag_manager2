@@ -34,6 +34,7 @@ type send_data_opts
 end type send_data_opts
 
 contains 
+!> \descrption scalar wrapper for fms_send_data
 subroutine fms_send_datascalar(diagobj, var)
  class (fms_diag_object),target, intent(inout), allocatable :: diagobj !< The diag variable object
  class(*)                      , intent(in) ,   target      :: var !< The variable
@@ -53,6 +54,7 @@ subroutine fms_send_data1d(diagobj, var)
  call switch_to_right_type(diagobj, null_1d, var(lbound(var,1)))
 
 end subroutine fms_send_data1d
+!> \descrption 4D wrapper for fms_send_data
 subroutine fms_send_data4d(diagobj, var, time, is_in, js_in, ks_in, mask, &
                                    rmask, ie_in, je_in, ke_in, weight, err_msg)
  class (fms_diag_object),target, intent(inout), allocatable :: diagobj !< The diag variable object
@@ -79,6 +81,7 @@ subroutine fms_send_data4d(diagobj, var, time, is_in, js_in, ks_in, mask, &
      var(lbound(var,1),lbound(var,2),lbound(var,3),lbound(var,4)) )
 
 end subroutine fms_send_data4d
+!> \descrption 5D wrapper for fms_send_data
 subroutine fms_send_data5d(diagobj, var, time, is_in, js_in, ks_in, mask, &
                                    rmask, ie_in, je_in, ke_in, weight, err_msg)
  class (fms_diag_object),target, intent(inout), allocatable :: diagobj !< The diag variable object
@@ -184,15 +187,10 @@ subroutine switch_to_right_type(diagobj, null_obj,var)
  if (associated(dptr)) nullify(dptr) !> Dont leak memory
  
 end subroutine switch_to_right_type
-
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 subroutine fms_send_data
 
 end subroutine fms_send_data
-
-subroutine set_var_in_type(input,output)
- class(*) output
- class(*) input
-end subroutine set_var_in_type
-
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 end module fms_diag_send_data_mod
