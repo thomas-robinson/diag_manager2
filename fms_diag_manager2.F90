@@ -3,6 +3,7 @@ module fms_diag_manager2_mod
 use fms_diag_data_mod, only: diag_files_type, diag_fields_type
 use fms_diag_data_mod, only: monthly, daily, diurnal, yearly, no_diag_avergaing, instantaneous, &
      three_hourly, six_hourly, r8, r4, i8, i4, string
+use fms_diag_data_mod, only: diag_null, diag_not_found, diag_not_registered, diag_registered_id
 use fms_diag_data_mod, only: diag_error,fatal,note,warning
 
 use fms_diag_concur_mod, only: diag_comm_init, fms_write_diag_comm, fms_diag_comm_type
@@ -45,6 +46,7 @@ public :: fms_diag_object_scalar, fms_diag_object_1d
 public :: fms_diag_object_2d, fms_diag_object_3d, fms_diag_object_4d, fms_diag_object_5d
 public :: send_data
 public :: operator (>), operator (<), operator (>=), operator (<=), operator (==), operator (.ne.)
+public :: diag_null, diag_not_found, diag_not_registered, diag_registered_id
 private :: diag_comm, diag_error
 private :: diag_files_type, diag_fields_type
 private :: monthly, daily, diurnal, yearly, no_diag_avergaing, instantaneous
