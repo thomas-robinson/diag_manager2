@@ -1,8 +1,11 @@
-!Program testing some matrix column avarage operations in
-program dm2_omp_aux_test
+!! \brief Contains a program for testing module fms_diag_omp_aux
+
+! \description
+!! Contains a program for testing module fms_diag_omp_aux
+program diag_manager_omp_aux_test
     use omp_lib
-    use dm2_omp_aux, only: get_average
-    use dm2_omp_dummy, only: alloc_subarray
+    use fms_diag_omp_aux, only: get_average
+    use fms_diag_omp_dummy, only: alloc_subarray
     implicit none
 
     integer, parameter:: dp=kind(0.d0)
@@ -137,7 +140,7 @@ program dm2_omp_aux_test
     a_average3D(1,1,1) = 2.23_dp
     print *,"a_average3D(1,1,1:3)= ",a_average3D(1,1,1:3)  !! just print the first three
 
-end program dm2_omp_aux_test
+end program diag_manager_omp_aux_test
 
 !!TODO convention for index starting array.
 !! Array multi dim
