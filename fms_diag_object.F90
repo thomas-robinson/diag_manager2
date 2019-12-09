@@ -8,7 +8,13 @@ module fms_diag_object_mod
 !! that contains all of the information of the variable.  It is extended by a type that holds the
 !! appropriate buffer for the data for manipulation.
 use fms_diag_data_mod,  only: diag_null, diag_error, fatal, note, warning
+use fms_diag_data_mod,  only: r8, r4, i8, i4, string, null_type_int
+use fms_diag_data_mod, only: diag_null, diag_not_found, diag_not_registered, diag_registered_id
+use fms_diag_table_mod,  only: is_field_type_null
 use fms_diag_table_mod, only: diag_fields_type, diag_files_type, get_diag_table_field
+
+implicit none
+
 interface operator (<)
      procedure obj_lt_int
      procedure int_lt_obj
@@ -46,7 +52,7 @@ type fms_diag_object
      logical, allocatable, private                    :: registered     !< true when registered
      integer, allocatable, dimension(:), private      :: frequency         !< specifies the frequency
 
-     integer                                          :: vartype           !< the type of varaible
+     integer,          allocatable, private           :: vartype           !< the type of varaible
      character(len=:), allocatable, private           :: varname           !< the name of the variable     
      character(len=:), allocatable, private           :: longname          !< longname of the variable     
      character(len=:), allocatable, private           :: units             !< the units
@@ -57,12 +63,14 @@ type fms_diag_object
 
      contains
 !     procedure :: send_data => fms_send_data
+     procedure :: init_ob => diag_obj_init
      procedure :: diag_id_inq => fms_diag_id_inq
      procedure :: copy => copy_diag_obj
      procedure :: register_meta => fms_register_diag_field_obj
-     procedure :: init_ob => diag_obj_init
      procedure :: setID => set_diag_id
      procedure :: is_registered => diag_ob_registered
+     procedure :: set_type => set_vartype
+     procedure :: vartype_inq => what_is_vartype
 end type fms_diag_object
 !> \brief Extends the variable object to work with multiple types of data
 type, extends(fms_diag_object) :: fms_diag_object_scalar
@@ -122,6 +130,15 @@ subroutine fms_diag_object_init (mlv,mlm)
  null_5d%diag_id = DIAG_NULL
 end subroutine fms_diag_object_init
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!> \Description Sets the diag_id to the not registered value.
+subroutine diag_obj_init(ob)
+ class (fms_diag_object)      , intent(inout)                :: ob
+ select type (ob)
+  class is (fms_diag_object)
+     ob%diag_id = diag_not_registered !null_ob%diag_id
+ end select
+end subroutine diag_obj_init
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !> \description Fills in and allocates (when necessary) the values in the diagnostic object
 subroutine fms_register_diag_field_obj (dobj, modname, varname, axes, time, longname, units, missing_value, metadata)
  class(fms_diag_object)     , intent(inout)            :: dobj
@@ -135,11 +152,20 @@ subroutine fms_register_diag_field_obj (dobj, modname, varname, axes, time, long
  character(*), dimension(:) , intent(in), optional     :: metadata
 ! class(*), pointer :: vptr
 
+
 !> Fill in information from the register call
   allocate(character(len=MAX_LEN_VARNAME) :: dobj%varname)
   dobj%varname = trim(varname)
   allocate(character(len=len(modname)) :: dobj%modname)
   dobj%modname = trim(modname)
+!> Grab the information from the diag_table
+  dobj%diag_field = get_diag_table_field(trim(varname))
+  if (is_field_type_null(dobj%diag_field)) then
+     dobj%diag_id = diag_not_found
+     dobj%vartype = diag_null
+     return
+  endif
+!> get the optional arguments if included and the diagnostic is in the diag table
   if (present(longname)) then
      allocate(character(len=len(longname)) :: dobj%longname)
      dobj%longname = trim(longname)
@@ -157,13 +183,12 @@ subroutine fms_register_diag_field_obj (dobj, modname, varname, axes, time, long
   else   
       dobj%missing_value = DIAG_NULL
   endif
-!> Grab the information from the diag_table
-  dobj%diag_field = get_diag_table_field(trim(varname))
+
 !     write(6,*)"IKIND for diag_fields(1) is",dobj%diag_fields(1)%ikind
 !     write(6,*)"IKIND for "//trim(varname)//" is ",dobj%diag_field%ikind
 end subroutine fms_register_diag_field_obj
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!> \brief Sets the diag_id
+!> \brief Sets the diag_id.  This can only be done if a variable is unregistered
 subroutine set_diag_id(objin , id)
  class (fms_diag_object) , intent(inout):: objin
  integer                                :: id
@@ -171,12 +196,62 @@ subroutine set_diag_id(objin , id)
      if (objin%registered) then
           call diag_error("set_diag_id", "The variable"//objin%varname//" is already registered", FATAL)
      endif
- elseif (objin%diag_id .ne. diag_null) then
-     call diag_error("set_diag_id",  "The variable"//objin%varname//" ID is being reassigned",warning)
  else
      objin%diag_id = id
  endif
 end subroutine set_diag_id
+!> \brief Find the type of the variable and store it in the object
+subroutine set_vartype(objin , var)
+ class (fms_diag_object) , intent(inout):: objin
+ class(*)                               :: var
+ select type (var)
+     type is (real(kind=8))
+          objin%vartype = r8
+     type is (real(kind=4))
+          objin%vartype = r4
+     type is (integer(kind=8))
+          objin%vartype = i8
+     type is (integer(kind=4))
+          objin%vartype = i4
+     type is (character(*))
+          objin%vartype = string
+     class default
+          objin%vartype = null_type_int
+          call diag_error("set_vartype", "The variable"//objin%varname//" is not a supported type "// &
+          " r8, r4, i8, i4, or string.", warning) 
+ end select
+end subroutine set_vartype
+!> \brief Prints to the screen what type the diag variable is
+subroutine what_is_vartype(objin)
+ class (fms_diag_object) , intent(inout):: objin
+ if (.not. allocated(objin%vartype)) then
+     call diag_error("what_is_vartype", "The variable type has not been set prior to this call", warning)
+     return
+ endif
+ select case (objin%vartype)
+     case (r8)
+          call diag_error("what_is_vartype", "The variable type of "//trim(objin%varname)//&
+          " is REAL(kind=8)", NOTE)
+     case (r4)
+          call diag_error("what_is_vartype", "The variable type of "//trim(objin%varname)//&
+          " is REAL(kind=4)", NOTE)
+     case (i8)
+          call diag_error("what_is_vartype", "The variable type of "//trim(objin%varname)//&
+          " is INTEGER(kind=8)", NOTE)
+     case (i4)
+          call diag_error("what_is_vartype", "The variable type of "//trim(objin%varname)//&
+          " is INTEGER(kind=4)", NOTE)
+     case (string)
+          call diag_error("what_is_vartype", "The variable type of "//trim(objin%varname)//&
+          " is CHARACTER(*)", NOTE)
+     case (null_type_int)
+          call diag_error("what_is_vartype", "The variable type of "//trim(objin%varname)//&
+          " was not set", WARNING)
+     case default
+          call diag_error("what_is_vartype", "The variable type of "//trim(objin%varname)//&
+          " is not supported by diag_manager", FATAL)
+ end select
+end subroutine what_is_vartype
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !> \brief Registers the object
 subroutine diag_ob_registered(objin , reg)
@@ -210,15 +285,6 @@ select type (objout)
 end select
 end subroutine copy_diag_obj
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!> Replaces the object will a null object of the same type
-subroutine diag_obj_init(ob)
- class (fms_diag_object)      , intent(inout)                :: ob
- select type (ob)
-  class is (fms_diag_object)
-     ob%diag_id = null_ob%diag_id
- end select
-end subroutine diag_obj_init
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !> \brief Returns the diag_id
 integer function fms_diag_id_inq (dobj) result(diag_id)
  class(fms_diag_object)     , intent(inout)            :: dobj
@@ -229,6 +295,17 @@ integer function fms_diag_id_inq (dobj) result(diag_id)
  endif
      diag_id = dobj%diag_id
 end function fms_diag_id_inq
+
+
+
+
+
+
+
+
+
+
+
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! Operator Overrides !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

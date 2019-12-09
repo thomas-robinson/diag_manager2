@@ -2,6 +2,7 @@ module fms_diag_send_data_mod
 use fms_diag_object_mod
 !> \descrption The user API for diag_manager is send_data.  Users pass their variable object to
 !! this routine, and magic happens.
+!! - Check if the diagnostic object is allocated/registered.  If it isn't return.
 !! - On the first call, the diag object is converted to the correct type to allow for bufferring.
 !! - If the input data are static, they are written to the file(s) they are supposed to go to.  Subsequent
 !! send data calls will be ignored (a quick return).
@@ -33,6 +34,7 @@ type send_data_opts
 end type send_data_opts
 
 contains 
+!> \descrption scalar wrapper for fms_send_data
 subroutine fms_send_datascalar(diagobj, var)
  class (fms_diag_object),target, intent(inout), allocatable :: diagobj !< The diag variable object
  class(*)                      , intent(in) ,   target      :: var !< The variable
@@ -49,9 +51,10 @@ subroutine fms_send_data1d(diagobj, var)
 !> If the diagnostic object is not allocated, then return
  if (.not.allocated( diagobj )) return
 !> If this is the first call in, set the type to be fms_diag_object_1d
- call switch_to_right_type(diagobj, null_1d)
+ call switch_to_right_type(diagobj, null_1d, var(lbound(var,1)))
 
 end subroutine fms_send_data1d
+!> \descrption 4D wrapper for fms_send_data
 subroutine fms_send_data4d(diagobj, var, time, is_in, js_in, ks_in, mask, &
                                    rmask, ie_in, je_in, ke_in, weight, err_msg)
  class (fms_diag_object),target, intent(inout), allocatable :: diagobj !< The diag variable object
@@ -74,9 +77,11 @@ subroutine fms_send_data4d(diagobj, var, time, is_in, js_in, ks_in, mask, &
 !> If the diagnostic object is not allocated, then return
  if (.not.allocated( diagobj )) return
 !> If this is the first call in, set the type to be fms_diag_object_4d
- call switch_to_right_type(diagobj, null_4d)
+ call switch_to_right_type(diagobj, null_4d, &
+     var(lbound(var,1),lbound(var,2),lbound(var,3),lbound(var,4)) )
 
 end subroutine fms_send_data4d
+!> \descrption 5D wrapper for fms_send_data
 subroutine fms_send_data5d(diagobj, var, time, is_in, js_in, ks_in, mask, &
                                    rmask, ie_in, je_in, ke_in, weight, err_msg)
  class (fms_diag_object),target, intent(inout), allocatable :: diagobj !< The diag variable object
@@ -99,7 +104,8 @@ subroutine fms_send_data5d(diagobj, var, time, is_in, js_in, ks_in, mask, &
 !> If the diagnostic object is not allocated, then return
  if (.not.allocated( diagobj )) return
 !> If this is the first call in, set the type to be fms_diag_object_5d
- call switch_to_right_type(diagobj, null_5d)
+ call switch_to_right_type(diagobj, null_5d, &
+     var(lbound(var,1),lbound(var,2),lbound(var,3),lbound(var,4),lbound(var,5)) )
 
 end subroutine fms_send_data5d
 
@@ -123,7 +129,7 @@ subroutine fms_send_data2d (diagobj, var, time, is_in, js_in, ks_in, mask, &
 ! local vars
  class (fms_diag_object)      , pointer                     :: dptr => NULL()
 !> If this is the first call in, set the type to be fms_diag_object_2d
- call switch_to_right_type(diagobj, null_2d)
+ call switch_to_right_type(diagobj, null_2d, var(lbound(var,1),lbound(var,2)) )
 
 end subroutine fms_send_data2d
 
@@ -150,14 +156,19 @@ subroutine fms_send_data3d (diagobj, var, time, is_in, js_in, ks_in, mask, &
 !> If the diagnostic object is not allocated, then return
  if (.not.allocated( diagobj )) return
 !> If this is the first call in, set the type to be fms_diag_object_3d
- call switch_to_right_type(diagobj, null_3d)
+ call switch_to_right_type(diagobj, null_3d, var(lbound(var,1),lbound(var,2),lbound(var,3)) )
 
 end subroutine fms_send_data3d
-
-subroutine switch_to_right_type(diagobj, null_obj)
+!> \Description This routine is used to switch the diag object to the correct type based on the dimensions
+!! of the input data.  It then determines the type of the data, and stores that within the object.  Only
+!! one datum needs to be send in to determine the data type, so this routine is shared by all of the
+!! send_data calls.
+!! This only needs to be done one time. 
+subroutine switch_to_right_type(diagobj, null_obj,var)
  class (fms_diag_object),target, intent(inout), allocatable :: diagobj !< The diag variable object
  class (fms_diag_object),intent(in)                         :: null_obj !< The null object that matches the diagnostic
- class (fms_diag_object), allocatable                       ::  dcopy
+ class (*)              ,intent (in)                        :: var
+ class (fms_diag_object), allocatable                       :: dcopy
  class (fms_diag_object), pointer                           :: dptr => NULL()
  
  dptr => diagobj
@@ -169,20 +180,17 @@ subroutine switch_to_right_type(diagobj, null_obj)
           deallocate(diagobj) !> Deallocate the object
           diagobj = null_obj !> Copy the null into the variable object to set the type
           call dcopy%copy(diagobj) !> Copy the original values in
+!> Determne the type of var
+          call diagobj%set_type(var)
  end select
  if (allocated(dcopy)) deallocate(dcopy)
  if (associated(dptr)) nullify(dptr) !> Dont leak memory
-
+ 
 end subroutine switch_to_right_type
-
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 subroutine fms_send_data
 
 end subroutine fms_send_data
-
-subroutine set_var_in_type(input,output)
- class(*) output
- class(*) input
-end subroutine set_var_in_type
-
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 end module fms_diag_send_data_mod

@@ -11,7 +11,7 @@ integer, parameter :: nt = 96
 integer :: is, js, ks
 integer :: ierr
 real(kind=8) :: tdata(np,np,nz,nt)
-real(kind=8) :: t2d(np,np,nt)
+real(kind=4) :: t2d(np,np,nt)
  class(fms_diag_object),allocatable  :: id_tdata, id_2d, id_scalar
 integer :: i,j,k,t,tile
 write (6,*) "initialize diag manager"
@@ -20,8 +20,8 @@ write (6,*) "Diag manager initialized"
 !> Register tdata
 write (6,*) "Regster tdata"
 !     id_tdata = fms_register_diag_field (id_tdata, tdata, "tdata", (/"atmos_daily"/)) 
-     id_tdata = fms_register_diag_field ("tmod", "tdata", (/1,2,3/), 1)
-!     id_2d = fms_register_diag_field ("tmod", "tdata", (/1,2/), 1)
+     id_tdata = fms_register_diag_field ("moist", "tdata", (/1,2,3/), 1)
+     id_2d = fms_register_diag_field ("tmod", "nothing", (/1,2/), 1)
 
 !> create test data set
 tdata = 0.0d0
@@ -32,16 +32,16 @@ is=1 ; js=1 ; ks=1
      do j=js,np
      do i=is,np
           tdata(i,j,k,t) = dble(t)
-          t2d(i,j,t) = (t2d(i,j,t)*dble(i)-dble(j))+dble(t)
+          t2d(i,j,t) = (t2d(i,j,t)*(i)-(j))+(t)
      enddo
      enddo
      enddo
 
-          if (id_tdata > 0) then 
+          if (id_tdata > diag_not_registered) then
                call send_data(id_tdata, tdata(:,:,:,t), t, is, js, ks)
           endif
-          if (id_2d > 0) then
-               write(6,*) "Calling send data"
+          if (id_2d > diag_not_registered) then
+           write (6,*) "Call send data"
                call send_data(id_2d, t2d(:,:,t),t)
           endif
      enddo
@@ -68,7 +68,8 @@ is=1 ; js=1 ; ks=1
   class default
    write (6,*) "Not one of the specified types"
  end select
-
+ call id_tdata%vartype_inq()
+ call id_2d%vartype_inq()
 
 
 

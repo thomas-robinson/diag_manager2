@@ -1,7 +1,7 @@
 module fms_diag_data_mod
 
 use iso_c_binding
-use mpi
+use mpi !> Fortran 2018 style for mpi
 implicit none
 
 !include 'mpif.h'
@@ -30,26 +30,26 @@ integer, parameter :: string = 19 !< s is the 19th letter of the alphabet
 integer, parameter :: null_type_int = -999
 !> Matches C struct 
 type, bind(c) :: diag_files_type
-     character (c_char) :: fname (20)
-     character (c_char) :: frequnit (7)
-     integer (c_int)    :: freq
-     character (c_char) :: timeunit(7)
-     character (c_char) :: unlimdim(8)
-     character (c_char) :: key(8)
+     character (c_char) :: fname (20) !< file name
+     character (c_char) :: frequnit (7) !< the frequency unit
+     integer (c_int)    :: freq !< the frequency of data
+     character (c_char) :: timeunit(7) !< The unit of time
+     character (c_char) :: unlimdim(8) !< The name of the unlimited dimension
+     character (c_char) :: key(8) !< Storage for the key in the yaml file
 end type diag_files_type
-
+!> Matches C struct 
 type, bind(c) :: diag_fields_type
-     character (c_char) :: fname (20)
-     character (c_char) :: var(20)
-     character (c_char) :: files(20)
-     integer (c_int)    :: ikind
-     character (c_char) :: skind(20)
-     character (c_char) :: reduction(20)
-     character (c_char) :: all_all(4)
-     character (c_char) :: region(50)
-     character (c_char) :: regcoord(50)
-     character (c_char) :: module_location(20)
-     character (c_char) :: key(8)
+     character (c_char) :: fname (20) !< The field/diagnostic name
+     character (c_char) :: var(20) !< The name of the variable
+     character (c_char) :: files(20) !< The files that the diagnostic will be written to
+     integer (c_int)    :: ikind !< The type/kind of the variable
+     character (c_char) :: skind(20) !< The type/kind of the variable
+     character (c_char) :: reduction(20) !< IDK
+     character (c_char) :: all_all(4) !< This has to be "all"
+     character (c_char) :: region(50) !< The region
+     character (c_char) :: regcoord(50) !< Coodinates of the region
+     character (c_char) :: module_location(20) !< The module
+     character (c_char) :: key(8) !< Storage for the key in the yaml file
 end type diag_fields_type
 !> Placeholder for fms2_io file object type.
 type fms_io_obj
@@ -68,6 +68,7 @@ public :: fatal, note, warning
 
 
 contains
+!> \brief Wrapper for error routine to be used.
 subroutine diag_error(sub,mess,lev,mycomm)
 character(len=*), intent(in)  :: sub
 character(len=*), intent(in)  :: mess

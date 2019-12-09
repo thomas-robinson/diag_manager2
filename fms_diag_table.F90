@@ -1,11 +1,12 @@
 module fms_diag_table_mod
 
-use fms_diag_data_mod, only: diag_files_type, diag_fields_type, diag_error,fatal,note,warning
+use fms_diag_data_mod, only: diag_files_type, diag_fields_type, diag_error, diag_null
+use fms_diag_data_mod, only: fatal,note,warning
 use c_to_fortran_mod, only: fms_c2f_string
 use iso_c_binding
 implicit none
 
-public :: diag_table, fms_diag_table_init, fms_write_diag_table
+public :: diag_table, fms_diag_table_init, fms_write_diag_table, is_field_type_null
 
  character(len=:),allocatable :: diag_table
 
@@ -110,7 +111,7 @@ endif
      enddo     
  endif
 !> Initialize the NULL types
-null_field_type%ikind = -999
+null_field_type%ikind = DIAG_NULL
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !> Set the init value to .true.
 diag_table_init = .true.
@@ -121,9 +122,10 @@ type(diag_fields_type)function get_diag_table_field (field_name) result (field)
  character(len=*), intent(IN) :: field_name
  integer :: i
  do i = 1,size(diag_fields)
-  write(6,*) diag_files(i)%fname,fms_c2f_string(diag_fields(i)%fname),diag_fields(i)%fname,i
-!  write (6,*) diag_files(i)%fname
-     if (trim(field_name) == fms_c2f_string(diag_fields(i)%fname)) then
+!  write(6,*) trim(field_name),trim(fms_c2f_string(diag_fields(i)%fname)),"-"
+!  write (6,*) len(trim(field_name)),len(fms_c2f_string(diag_fields(i)%fname))
+!  write (6,*) diag_fields(i)%fname, trim(field_name) == fms_c2f_string(diag_fields(i)%fname)
+     if (trim(field_name) == trim(fms_c2f_string(diag_fields(i)%fname))) then
           field = diag_fields(i)
 write (6,*) field_name//" Found"
 
@@ -133,13 +135,16 @@ write (6,*) field_name//" Found"
  field = null_field_type
 
 end function get_diag_table_field
-
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!> \brief Compares two field type variables
+pure logical function is_field_type_null (in1)
+type(diag_fields_type), intent(in) :: in1
+is_field_type_null = (in1%ikind == DIAG_NULL) 
+end function is_field_type_null
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 subroutine fms_write_diag_table 
 !character(len=*), intent(in)                 :: diag_table_name 
 !character(len=:), intent(out), allocatable   :: diag_table_string
-
-
 
 end subroutine fms_write_diag_table
 
