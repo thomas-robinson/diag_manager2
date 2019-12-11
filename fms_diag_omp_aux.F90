@@ -13,16 +13,22 @@ module fms_diag_omp_aux
     use omp_lib
     implicit none
     private get_average_1D, get_average_2D, get_average_3D, get_average_4D, &
-    get_average_5D, num_offloading_threads
+    get_average_5D, alloc_subarray_3D, alloc_subarray_4D
 
+    !!Interface for calculating the averages.
     interface get_average
         procedure get_average_1D, get_average_2D, get_average_3D, &
             get_average_4D, get_average_5D
     end interface
 
-    integer, parameter:: dp=kind(0.d0)
+    !Interface for allocating an array of one less dimention than the argument array.
+    !It is assumed the RHS dimention will is the one that will not be in the newly
+    !allocated (sub) array
+    interface alloc_subarray
+        procedure alloc_subarray_3D, alloc_subarray_4D
+    end interface
 
-contains
+    contains
 
 
     !! Return the average of the data in the entire 1D input data array.
@@ -59,25 +65,20 @@ contains
         real (kind = 8),  intent(in) :: the_data (:,:)
         integer (kind=4), intent(in) :: num_threads
         real(kind=8), intent (in out) :: the_average(:)
-        real(dp) , allocatable :: the_sum (:)
         integer (kind=4) NT, i
 
-        integer :: allocation_status
-        character(len=99) :: emsg
+        NT = size (the_data,2)
 
-        NT = size (the_data,2) !! Number of data poins
-        !!TODO: See checking for error and logging on allocation, such as in
-        !! allocate(the_sum(M), stat=allocation_status, errmsg=emsg)
-        allocate(the_sum, MOLD=the_average)
+        the_average = 0.0d0
 
         !$opm declare target
 
-            !$omp parallel do reduction(+ : the_sum)
+            !$omp parallel do reduction(+ : the_average)
             do i = 1, NT
-             the_sum(:) = the_sum(:)+  the_data(:,i)
+             the_average(:) = the_average(:)+  the_data(:,i)
             end do
 
-       the_average(:) = the_sum(:)/ NT
+       the_average = the_average/ NT
 
     end subroutine get_average_2D
 
@@ -90,25 +91,21 @@ contains
         real (kind = 8),  intent(in) :: the_data (:,:,:)
         integer (kind=4), intent(in) :: num_threads
         real(kind=8), intent(in out) :: the_average(:,:)
-        real(kind=8), allocatable :: the_sum(:,:)
         integer :: NT,i
 
         NT = size (the_data,3)
 
-        allocate(the_sum, MOLD=the_average)
-
-        the_sum = 0.0d0
+        the_average = 0.0d0
 
         !$opm declare target
 
-        !$omp parallel do reduction(+ : the_sum)
+        !$omp parallel do reduction(+ : the_average)
         do i = 1, NT
-            the_sum(:,:) = the_sum(:,:) + the_data(:,:,i)
+            the_average(:,:) = the_average(:,:) + the_data(:,:,i)
         end do
 
-       the_average(:,:) = the_sum(:,:)/ NT
+       the_average = the_average/ NT
 
-       deallocate (the_sum)
 
     end subroutine get_average_3D
 
@@ -125,9 +122,7 @@ contains
 
         NT = size (the_data,4)
 
-        !!allocate(the_sum, MOLD=the_average)
-
-        the_average = 0.0_dp
+        the_average = 0.0d0
 
         !$opm declare target
 
@@ -136,9 +131,8 @@ contains
             the_average(:,:,:) = the_average(:,:,:) + the_data(:,:,:,i)
         end do
 
-        the_average(:,:,:) = the_average(:,:,:) / NT
+        the_average = the_average / NT
 
-       !deallocate(the_sum)
 
     end subroutine get_average_4D
 
@@ -150,7 +144,7 @@ contains
 
         NT = size (the_data,5)
 
-        the_average = 0.0_dp
+        the_average = 0.0d0
 
         !$opm declare target
 
@@ -159,7 +153,7 @@ contains
             the_average(:,:,:,:) = the_average(:,:,:,:) + the_data(:,:,:,:,i)
         end do
 
-        the_average(:,:,:,:) = the_average(:,:,:,:) / NT
+        the_average = the_average / NT
 
     end subroutine get_average_5D
 
@@ -178,11 +172,28 @@ function num_offloading_threads(cpu_num_threads) result (gpu_num_threads)
        max_gpu_num_threads = 1024
 
        initial_device = omp_is_initial_device()
+       !!initial_device = .True.
 
        if ((cpu_num_threads .ne. 0) .and. (initial_device .eqv. .False.)) then
           gpu_num_threads = max_gpu_num_threads
        end if
 end function num_offloading_threads
+
+
+    subroutine alloc_subarray_3D( the_data, the_average)
+        real (kind = 8),  intent(in) :: the_data (:,:,:)
+        real(kind=8), allocatable, intent(in out) :: the_average(:,:)
+        allocate (the_average(1:size(the_data,1), 1:size(the_data,2)))
+     !TODO: Determine allocation status
+     end subroutine alloc_subarray_3D
+
+      subroutine alloc_subarray_4D( the_data, the_average)
+        real (kind = 8),  intent(in) :: the_data (:,:,:,:)
+        real(kind=8), allocatable, intent(in out) :: the_average(:,:,:)
+         allocate (the_average(1: size(the_data,1), 1: size(the_data,2), 1: size(the_data,3)))
+     !TODO: Determine allocation status
+     end subroutine alloc_subarray_4D
+
 
 end module fms_diag_omp_aux
 

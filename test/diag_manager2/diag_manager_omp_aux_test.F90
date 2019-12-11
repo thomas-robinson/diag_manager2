@@ -4,8 +4,8 @@
 !! Contains a program for testing module fms_diag_omp_aux
 program diag_manager_omp_aux_test
     use omp_lib
-    use fms_diag_omp_aux, only: get_average
-    use fms_diag_omp_dummy, only: alloc_subarray
+    use fms_diag_omp_aux, only: get_average, alloc_subarray, num_offloading_threads
+    use fms_diag_omp_dummy
     implicit none
 
     integer, parameter:: dp=kind(0.d0)
@@ -72,7 +72,7 @@ program diag_manager_omp_aux_test
     num_threads_cpu = 4
     call omp_set_num_threads( num_threads_cpu )
 
-    !!call print_device_info()
+    call print_device_info()
 
     print *, "*** OMP_FF CALLS get_average (1D):"
 
@@ -148,47 +148,52 @@ end program diag_manager_omp_aux_test
  !This is a test subroutine.
     !Prints some info helpful in device offloading
     subroutine print_device_info()
+        use omp_lib
+        use fms_diag_omp_aux, only: num_offloading_threads
+        implicit none
 
-        integer :: num_threds, tid
-
-        integer :: initial_device !!TODO May need to change to logical
-
-        real(kind=8):: wtime
-
-        wtime = omp_get_wtime ( )
+        integer :: num_threads, tid, num_gpu_threads,n_gpu_thread
+        logical :: inital_dev
 
         print *, "In print_device_info()"
 
+        !$opm declare target
+
+
+         inital_dev = omp_is_initial_device()
+         print *, "Post declare target; pre parallel sec., inital_dev=", inital_dev
+
         !!OMP may be optimizing this for thread zero to thread to repeat
-        !$omp parallel private(tidnum_threads)
+        !$omp parallel private(tid, n_gpu_thread)
             tid = omp_get_thread_num()
 
             if (tid == 0) then
                 num_threads = omp_get_num_threads()
-                print *, "Hello from thread number 0=", tid
+                print *, "Hello from thrd id=", tid
                 print *, "In parallel section:"
                 print *, "Number of threads available  =", num_threads
                 print *, "Number of processors available = ", omp_get_num_procs ( )
-                print *, "Number of threads available = ", omp_get_max_threads ( )
+                print *, "Max threads available = ", omp_get_max_threads ( )
                 print *, "Number of devices = ", omp_get_num_devices()
             else
-                print *, "Hello from thread number !0=", tid
+                n_gpu_thread = num_offloading_threads(num_threads)
+                print *, "Hello from thrd id=", tid, "n_gpu_thread=", n_gpu_thread
             end if
         !$omp end parallel
 
-        print *, "Outside parallel - makes sense?"
+        print *, "Outside parallel section:"
         print *, "Number of threads available=", omp_get_num_threads()
         print *, "Number of devices = ", omp_get_num_devices()
 
-        !$omp target
-        initial_device = omp_is_initial_device()
-        !$omp end target
-
-        if (initial_device == 1) then
-            print * ,"Able to use offloading!"
+        num_gpu_threads = num_offloading_threads(num_threads)
+        if ( num_gpu_threads ==num_threads) then
+            print *, "Probably cannot offload?"
         else
-            print *, "NOT Able to use offloading!"
-        end if
+            print *, "Probably can offload?"
+        endif
+
+        print *, "Leaving print_device_info()"
+
 
     end subroutine print_device_info
 

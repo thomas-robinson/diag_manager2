@@ -7,34 +7,8 @@
 module fms_diag_omp_dummy
     use omp_lib
     implicit none
-    private alloc_subarray_3D, alloc_subarray_4D
 
-
-    !Interface for allocating an array of one less dimention than the argument array.
-    !It is assumed the RHS dimention will is the one that will not be in the newly
-    !allocated (sub) array
-    interface alloc_subarray
-        procedure alloc_subarray_3D, alloc_subarray_4D
-    end interface
-
-contains
-
-     subroutine alloc_subarray_3D( the_data, the_average)
-        real (kind = 8),  intent(in) :: the_data (:,:,:)
-        real(kind=8), allocatable, intent(in out) :: the_average(:,:)
-        allocate (the_average(1:size(the_data,1), 1:size(the_data,2)))
-     !TODO: Determine allocation status
-     end subroutine alloc_subarray_3D
-
-      subroutine alloc_subarray_4D( the_data, the_average)
-        real (kind = 8),  intent(in) :: the_data (:,:,:,:)
-        real(kind=8), allocatable, intent(in out) :: the_average(:,:,:)
-         allocate (the_average(1: size(the_data,1), 1: size(the_data,2), 1: size(the_data,3)))
-     !TODO: Determine allocation status
-     end subroutine alloc_subarray_4D
-
-
-
+    contains
 
     ! Calculate the 4D array contaning averages over the rightmost dimension
     ! of the input 5D data array.
@@ -135,17 +109,6 @@ contains
         M = size (data,2) ! length of one row == number of columns
         the_sum = 0;
         iter_chunk = 5  !TODO: find rational amount and method of determining.
-
-        !$omp target
-        initialDevice = omp_is_initial_device()
-        !$omp end target
-
-        if (initialDevice .eqv. .True.) then
-            print * ,"Not offloading! Limiting number of threads to", numThreads
-            call omp_set_num_threads( numThreads )
-        else
-            print *, "Able to use offloading!"
-        end if
 
         !compare with simple parallel for and parallel for reduction
         !!! omp parallel for reduction (+:the_sum)
