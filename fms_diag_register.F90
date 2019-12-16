@@ -1,7 +1,7 @@
 module fms_diag_register_mod
 
 use fms_diag_data_mod, only: diag_files_type, diag_fields_type
-use fms_diag_data_mod, only: monthly, daily, diurnal, yearly, no_diag_avergaing, instantaneous, &
+use fms_diag_data_mod, only: monthly, daily, diurnal, yearly, no_diag_averaging, instantaneous, &
      three_hourly, six_hourly, r8, r4, i8, i4, string, diag_registered_id
 use fms_diag_data_mod, only: diag_error,fatal,note,warning
 
