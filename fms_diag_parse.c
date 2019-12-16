@@ -20,7 +20,7 @@ int diag_parse_check (char* fname)
   }
   /* Set input file */
   yaml_parser_set_input_file(&parser, fyaml);
-  close (fyaml);
+  close (fyaml);  //TODO: This should really be fclose.
   return 0;
 }
 

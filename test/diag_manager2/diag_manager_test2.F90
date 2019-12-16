@@ -2,7 +2,7 @@ program diag_manager_test2
 
 use fms_diag_manager2_mod
 
-integer , parameter :: np = 192
+integer, parameter :: np = 192
 integer, parameter :: nz = 48
 integer, parameter :: ntiles = 6
 integer, parameter :: time_step = 900 
@@ -10,15 +10,20 @@ integer, parameter :: time_step = 900
 integer, parameter :: nt = 96
 integer :: is, js, ks
 integer :: ierr
-real(kind=8) :: tdata(np,np,nz,nt)
-real(kind=4) :: t2d(np,np,nt)
+real(kind=8), allocatable :: tdata(:,:,:,:)
+real(kind=4), allocatable :: t2d(:,:,:)
+
  class(fms_diag_object),allocatable  :: id_tdata, id_2d, id_scalar
-integer :: i,j,k,t,tile
+ integer :: i,j,k,t,tile
+ allocate (tdata(np,np,nz,nt))
+ allocate (t2d(np,np,nt))
+
 write (6,*) "initialize diag manager"
    call fms_diag_manager_init() 
 write (6,*) "Diag manager initialized"
+print *,  "Diag manager initialized"
 !> Register tdata
-write (6,*) "Regster tdata"
+write (6,*) "Register tdata"
 !     id_tdata = fms_register_diag_field (id_tdata, tdata, "tdata", (/"atmos_daily"/)) 
      id_tdata = fms_register_diag_field ("moist", "tdata", (/1,2,3/), 1)
      id_2d = fms_register_diag_field ("tmod", "nothing", (/1,2/), 1)
@@ -71,7 +76,7 @@ is=1 ; js=1 ; ks=1
  call id_tdata%vartype_inq()
  call id_2d%vartype_inq()
 
-
+!!
 
 end program diag_manager_test2
 
