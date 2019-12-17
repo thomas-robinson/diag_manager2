@@ -15,7 +15,7 @@ integer, parameter :: monthly = 30
 integer, parameter :: daily = 24 
 integer, parameter :: diurnal = 2
 integer, parameter :: yearly = 12
-integer, parameter :: no_diag_avergaing = 0
+integer, parameter :: no_diag_averaging = 0
 integer, parameter :: instantaneous = 0
 integer, parameter :: three_hourly = 3
 integer, parameter :: six_hourly = 6
@@ -61,7 +61,7 @@ end type fms_io_obj
 
 integer :: fatal=-143, note=143, warning=143*2
 public :: diag_files_type, diag_fields_type
-public :: monthly, daily, diurnal, yearly, no_diag_avergaing, instantaneous
+public :: monthly, daily, diurnal, yearly, no_diag_averaging, instantaneous
 public :: three_hourly, six_hourly, r8, r4, i8, i4, string
 public :: diag_error, fms_io_obj
 public :: fatal, note, warning
