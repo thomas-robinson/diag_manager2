@@ -14,8 +14,8 @@ else ifeq ($(CC),icc)
 	MPFTN=mpiifort
  	COMPHOME=$(INTELHOME)
  	#FFLAGS=-no-wrap-margin -traceback -stand f18 -g -Wall
- 	#FFLAGS=-stand f18 -g -Wall
- 	FFLAGS=-stand f18 -g -qopenmp
+ 	#FFLAGS=-stand f18 -g -Wall -Ofast
+ 	FFLAGS=-stand f18 -g -qopenmp -warn
 endif
 
 
@@ -55,15 +55,15 @@ parser_test: parser.x
 #	make clean
 	./$< diag_yaml
 	make clean
-omp_ave_test: diag_manager_omp_aux_test.x
+omp_ave_test: diag_manager_averaging_test.x
 #	make clean
 	./$< 
 	make clean
 	
-diag_table_test.x: fms_diag_parse.o fms_diag_table.o 
+diag_table_test.x: fms_diag_data.o fms_c_to_fortran.o fms_diag_parse.o fms_diag_table.o  
 	$(FTN) $(INCLUDE) $(LIB) $(l) $(FFLAGS) $^  test/diag_table_test.F90 -o $@
-diag_manager_omp_aux_test.x: fms_diag_omp_aux.o fms_diag_omp_dummy.o
-	$(MPFTN) $(INCLUDE) $(LIB) $(l) $(FFLAGS) $^  test/diag_manager2/diag_manager_omp_aux_test.F90 -o $@
+diag_manager_averaging_test.x: fms_diag_averaging.o fms_diag_omp_dummy.o
+	$(MPFTN) $(INCLUDE) $(LIB) $(l) $(FFLAGS) $^  test/diag_manager2/diag_manager_averaging_test.F90 -o $@
 	
 fms_diag_manager2.o:fms_diag_register.o fms_diag_object.o fms_diag_table.o \
         fms_diag_data.o fms_diag_concur.o fms_diag_send_data.o
@@ -86,8 +86,8 @@ parser.x: fms_diag_parse.o
 	$(CC)  $(INCLUDE) $(LIB) $(l) -dynamic $(CFLAGS) $^ parser.c -o $@
 fms_diag_send_data.o:
 	$(FTN) $(INCLUDE) $(LIB) $(l) $(FFLAGS) $^ fms_diag_send_data.F90 -c 
-fms_diag_omp_aux.o:
-	$(FTN) $(INCLUDE) $(LIB) $(l) $(FFLAGS) $^ fms_diag_omp_aux.F90 -c 
+fms_diag_averaging.o:
+	$(FTN) $(INCLUDE) $(LIB) $(l) $(FFLAGS) $^ fms_diag_averaging.F90 -c 
 fms_diag_omp_dummy.o:
 	$(FTN) $(INCLUDE) $(LIB) $(l) $(FFLAGS) $^ fms_diag_omp_dummy.F90 -c 
 concur.x: fms_diag_concur.o fms_diag_data.o

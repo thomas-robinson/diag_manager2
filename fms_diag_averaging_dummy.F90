@@ -4,7 +4,7 @@
 !! may be deleted without notice. This file is used
 !! to support the development of module diag_manager_omp_aux module and its test program
 
-module fms_diag_omp_dummy
+module fms_diag_averaging_dummy
     use omp_lib
     implicit none
 
@@ -96,4 +96,4 @@ module fms_diag_omp_dummy
     end subroutine get_average_v1
 
 
-end module fms_diag_omp_dummy
+end module fms_diag_averaging_dummy

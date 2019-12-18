@@ -2,10 +2,10 @@
 
 ! \description
 !! Contains a program for testing module fms_diag_omp_aux
-program diag_manager_omp_aux_test
+program diag_manager_averaging_test
     use omp_lib
-    use fms_diag_omp_aux, only: get_average, alloc_subarray, num_offloading_threads
-    use fms_diag_omp_dummy
+    use fms_diag_averaging, only: get_average, alloc_subarray, num_offloading_threads
+    use fms_diag_averaging_dummy
     implicit none
 
     integer, parameter:: dp=kind(0.d0)
@@ -217,8 +217,7 @@ program diag_manager_omp_aux_test
     call print_device_info()
 
 
-
-end program diag_manager_omp_aux_test
+end program diag_manager_averaging_test
 
 !!TODO convention for index starting array.
 !! Array multi dim
@@ -227,7 +226,7 @@ end program diag_manager_omp_aux_test
     !Prints some info helpful in device offloading
     subroutine print_device_info()
         use omp_lib
-        use fms_diag_omp_aux, only: num_offloading_threads
+        use fms_diag_averaging, only: num_offloading_threads
         implicit none
 
         integer :: num_threads, tid, num_gpu_threads,n_gpu_thread

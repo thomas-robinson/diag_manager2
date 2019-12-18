@@ -1,6 +1,6 @@
 !! \brief Contains OpenMP-based averaging routines
 !!
-!! \description This odule for performssome statistical (e.g. average) operations
+!! \description This module for performssome statistical (e.g. average) operations
 !! on data arrays. Typically, With the input array A being N-dimensioanl, an
 !! (N-1)-dimensional array is calculated containing the averages for the Nth (righmost) dimension.
 !! TODO: 1) Test the actual offloading. See "omp declare target" statement in the
@@ -9,7 +9,7 @@
 !! TODO 3) Determine loggin error policy (related to array allocation if any)
 !! TODO 4) Delete all experimental subroutines
 
-module fms_diag_omp_aux
+module fms_diag_averaging
     use omp_lib
     implicit none
     private get_average_1D, get_average_2D, get_average_3D, get_average_4D, &
@@ -31,7 +31,7 @@ module fms_diag_omp_aux
     contains
 
 
- !! Calculate the acalar averages of the input 1D array
+ !! Calculate the scalar average of the input 1D array
 !! the_data: the input data
 !! the_average : Scalar variable where the average is to be stored.
 !! The averages that will be  calculated are the_average(si_o : ei_o, sj_o : ej_o) if the
@@ -248,5 +248,5 @@ end function num_offloading_threads
      end subroutine alloc_subarray_4D
 
 
-end module fms_diag_omp_aux
+end module fms_diag_averaging
 
