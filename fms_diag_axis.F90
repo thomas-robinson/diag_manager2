@@ -1,7 +1,7 @@
 module fms_diag_axis_mod
 
-use fms_diag_data_mod :: only, diag_error
-use fms2_io
+!< use fms_diag_data_mod :: only, diag_error
+!< use fms2_io
 
 type domain1d
  integer :: filler
@@ -26,6 +26,8 @@ type diag_axis_type
      character (len=:), allocatable :: longname !< The longname of the axis
      integer :: alen !< The length of the axis
      integer :: direction !< The direction of the axis
+     character(len=*) :: set_name !< Set name of the axis
+     integer :: set !< set number?
      TYPE(domain1d) :: Domain !<Axis domain
      TYPE(domain2d) :: Domain2 !< Axis domain if 2D
      TYPE(domainUG) :: DomainU !< Axis domain if unstructured
@@ -55,6 +57,10 @@ integer :: num_def_axes = 0
 ! ---- global storage for all defined axes ----
 type(diag_axis_type), allocatable, save :: Axes(:)
 
+! ---- temporary arrays for increasing size ----
+character(len=128), allocatable :: Axis_sets_temp(:)
+type(diag_axis_type), allocatable :: Axes_temp(:)
+
 public :: diag_axis_type
 public :: UP, DOWN, VOID_AXIS, HORIZONTAL
 
@@ -65,7 +71,7 @@ type(diag_axis_type) function fms_diag_axis_init (axis, aname, adata, units, car
     type(diag_axis_type), intent(inout)      :: axis !< The axis object
     character(len=*), intent(in)             :: aname !< The name of the axis
     class(*), target, intent(in), dimension(:)    :: adata !< The axis data
-    class(*), pointer,          , dimension(:)    :: dptr=> NULL() !< A pointer to the data
+    class(*),pointer,        dimension(:)    :: dptr=> NULL() !< A pointer to the data
     character(len=*), intent(in)             :: units !< The axis units
     character(len=*), intent(in)             :: cart !< The cartesian name of the axis 
     character(len=*), intent(in), optional   :: long_name !< Axis long name
@@ -96,18 +102,20 @@ type(diag_axis_type) function fms_diag_axis_init (axis, aname, adata, units, car
          "Y Z U or N.  You have "//trim(cart), FATAL)
 
     ! Allocate the axes
-    if (.not. allocated(Axis_sets)) allocate(Axis_sets(0:1))
-    if (.not. allocated(Axes)) allocate(Axes(0:1))
-    end if
+    if (.not. allocated(Axis_sets)) then 
+	allocate(Axis_sets(0:1))
+    endif
+    if (.not. allocated(Axes)) then 
+	allocate(Axes(0:1))
+    endif
 
 !---- is there an axis set? ----
     if ( present(set_name) ) then
        set = get_axis_set_num (set_name)
        !Increase size of Axis_sets array by 1
-       integer, allocatable :: tmp(:)
-       allocate(tmp(0:size(Axis_sets))
-       tmp(0:size(Axis_sets)) = Axis_sets(0:size(Axis_sets))
-       call move_alloc(tmp, Axis_sets)
+       allocate(Axis_sets_temp(0:size(Axis_sets) + 1))
+       Axis_sets_temp(0:size(Axis_sets)) = Axis_sets(0:size(Axis_sets))
+       call move_alloc(Axis_sets_temp, Axis_sets)
        !---- add new set name ----
        if (set == 0) then
           num_axis_sets = num_axis_sets + 1
@@ -123,24 +131,23 @@ type(diag_axis_type) function fms_diag_axis_init (axis, aname, adata, units, car
     ! if this is time axis, return the ID of a previously defined
     ! if this is spatial axis, FATAL error
     do i = 1, num_def_axes
-       if ( trim(name) == Axes(i)%name ) then
-          if ( trim(name) == 'Stations' .or. trim(name) == 'Levels') THEN
+       if ( trim(aname) == Axes(i)%aname ) then
+          if ( trim(aname) == 'Stations' .or. trim(aname) == 'Levels') THEN
              fms_diag_axis_init = Axes(i)
              return
-          else if ( set == Axes(i)%set ) then
-             if ( trim(lowercase(name)) == 'time' .or.&
-                  & trim(lowercase(cart_name)) == 't' .or.&
-                  & trim(lowercase(name)) == 'nv' .or.&
-                  & trim(lowercase(cart_name)) == 'n' ) then
+          else if ( set == Axes(i)%set) then
+             if ( trim(lowercase(aname)) == 'time' .or.&
+                  & trim(lowercase(cart)) == 't' .or.&
+                  & trim(lowercase(aname)) == 'nv' .or.&
+                  & trim(lowercase(cart)) == 'n' ) then
                 fms_diag_axis_init = Axes(i)
                 return
-             else if ( (lowercase(cart_name) /= 'x' .and. lowercase(cart_name) /= 'y')&
+             else if ( (lowercase(cart) /= 'x' .and. lowercase(cart) /= 'y')&
                   & .or. tile /= Axes(i)%tile) then
                 ! <ERROR STATUS="FATAL">axis_name <NAME> and axis_set already exist.</ERROR>
                 call error_mesg('diag_axis_mod::diag_axis_init',&
                      & 'axis_name '//trim(name)//' and axis_set already exist.', FATAL)
              end if
-          end if
        end if
     end do
 
@@ -148,53 +155,58 @@ type(diag_axis_type) function fms_diag_axis_init (axis, aname, adata, units, car
     num_def_axes = num_def_axes + 1
 
     !Increase size of Axes array by 1
-    integer, allocatable :: tmp(:)
-    allocate(tmp(0:size(Axes))
-    tmp(0:size(Axes)) = Axes(0:size(Axes))
-    call move_alloc(tmp, Axes)
+    allocate(Axes_temp(0:size(Axes) + 1))
+    Axes_temp(0:size(Axes)) = Axes(0:size(Axes))
+    call move_alloc(Axes_temp, Axes)
 
     !---- allocate storage for coordinate values of axis ----
-    if ( Axes(num_def_axes)%cart == 'T' ) then
+    if ( axis%cart == 'T' ) then
        axlen = 0
     else
-       axlen = SIZE(DATA(:))
+       axlen = size(adata(:))
     end if
-    allocate ( Axes(num_def_axes)%adata(0:axlen) )
+    allocate(axis%adata(0:axlen))
 
-     Axes(num_def_axes)%aname = trim(aname)
-     Axes(num_def_axes)%adata = adata(1:axlen)
-     Axes(num_def_axes)%units = units
-     Axes(num_def_axes)%alen = axlen
-     Axes(num_def_axes)%cart = cart
-     if (present(start)) then 
-          Axes(num_def_axes)%start = start
+     axis%aname = trim(aname)
+     axis%adata = adata(1:axlen)
+     axis%units = units
+     axis%alen = axlen
+     axis%cart = cart
+     axis%set = set
+     if (present(set_name)) then 
+          axis%set_name = set_name
      else 
-          Axes(num_def_axes)%start = 1
+          axis%set_name = ' '
+     end if
+     if (present(start)) then 
+          axis%start = start
+     else 
+          axis%start = 1
      end if
      if (present(ending)) then 
-          Axes(num_def_axes)%ending = ending
+          axis%ending = ending
      else 
-          Axes(num_def_axes)%ending = 1
+          axis%ending = 1
      end if
      if (present(longname)) then 
-          Axes(num_def_axes)%longname = trim(longname)
+          axis%longname = trim(longname)
      else
-          Axes(num_def_axes)%longname = trim(aname)
+          axis%longname = trim(aname)
      end if
      if (present(direction)) then 
-          Axes(num_def_axes)%direction = direction
+          axis%direction = direction
      else 
-          Axes(num_def_axes)%direction = HORIZONTAL
+          axis%direction = HORIZONTAL
      end if
      if (present(tile_count)) then
-	  Axes(num_def_axes)%tile = tile_count
+	  axis%tile = tile_count
      else 
-	  Axes(num_def_axes)%tile = 1
+	  axis%tile = 1
      end if
      if (present(attributes)) then 
-          alloacte(character(len=20) :: Axes(num_def_axes)%attributes (size(attributes)))
+          allocate(character(len=20) :: axis%attributes (size(attributes)))
           do i = 1,size(attributes)
-               Axes(num_def_axes)%attributes(i) =  attributes
+               axis%attributes(i) =  attributes
           end do
      end if
 
@@ -209,40 +221,45 @@ type(diag_axis_type) function fms_diag_axis_init (axis, aname, adata, units, car
        call error_mesg('diag_axis_mod::diag_axis_init',&
             & 'Presence of both Domain and Domain2 at the same time is prohibited', FATAL)
     else if ( present(Domain2) .or. present(Domain)) then
-       if ( Axes(num_def_axes)%cart_name /= 'X' .and. Axes(num_def_axes)%cart_name /= 'Y') then
+       if ( axis%cart /= 'X' .and. axis%cart /= 'Y') then
           ! <ERROR STATUS="FATAL">Domain must not be present for an axis which is not in the X or Y direction.</ERROR>
           call error_mesg('diag_axis_mod::diag_axis_init',&
                & 'A Structured Domain must not be present for an axis which is not in the X or Y direction', FATAL)
        end if
-    else if (present(DomainU) .and. Axes(num_def_axes)%cart_name /= 'U') then
+    else if (present(DomainU) .and. axis%cart /= 'U') then
           call error_mesg('diag_axis_mod::diag_axis_init',&
                & 'In the unstructured domain, the axis cart_name must be U', FATAL)
     end if
 
 
     if ( present(Domain2) ) then
-       Axes(num_def_axes)%Domain2 = Domain2
+       axis%Domain2 = Domain2
        call mpp_get_domain_components(Domain2, domain_x, domain_y, tile_count=tile_count)
-       if ( Axes(num_def_axes)%cart_name == 'X' ) Axes(num_def_axes)%Domain = domain_x
-       if ( Axes(num_def_axes)%cart_name == 'Y' ) Axes(num_def_axes)%Domain = domain_y
-       Axes(num_def_axes)%DomainUG = null_DomainUG
-    else if ( PRESENT(Domain)) then
+       if ( axis%cart == 'X' ) then
+          axis%Domain = domain_x
+       end if      
+       if ( axis%cart == 'Y' ) then
+          axis%Domain = domain_y
+          axis%DomainU = null_DomainUG
+       end if
+    else if ( present(Domain)) then
        !---- domain1d type ----
-       Axes(num_def_axes)%Domain2 = null_domain2d ! needed since not 2-D domain
-       Axes(num_def_axes)%Domain = Domain
-       Axes(num_def_axes)%DomainUG = null_DomainUG
-    else (present(DomainU)) then
-       Axes(num_def_axes)%Domain2 = null_domain2d
-       Axes(num_def_axes)%Domain = null_domain1d
-       Axes(num_def_axes)%DomainUG = DomainU
+       axis%Domain2 = null_domain2d ! needed since not 2-D domain
+       axis%Domain = Domain
+       axis%DomainU = null_DomainUG
+    else if (present(DomainU)) then
+       axis%Domain2 = null_domain2d
+       axis%Domain = null_domain1d
+       axis%DomainU = DomainU
     else
-       Axes(num_def_axes)%Domain2 = null_domain2d
-       Axes(num_def_axes)%Domain = null_domain1d
-       Axes(num_def_axes)%DomainUG = null_domainUG
+       axis%Domain2 = null_domain2d
+       axis%Domain = null_domain1d
+       axis%DomainU = null_domainU
     end if
+	
+    axis%initialized = .true.
 
-
-     Axes(num_def_axes)%initialized = .true.
+    Axes(num_def_axes) = axis
 end function fms_diag_axis_init
 
   
