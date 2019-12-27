@@ -30,7 +30,7 @@ logical :: fms_diag_concur_init = .false. !< Set to true after diag_comm_split i
 logical :: diag_comm_exist = .false. !< Set to true if there is a diagnostic communicator set up
 
 contains
-
+!> \brief Sets up the diag manager communicator for using diagnostics as a service
 subroutine diag_comm_init (diag_comm,diag_pes,parent_comm)
  type(fms_diag_comm_type),intent(out)   :: diag_comm !< The diag communicator
  integer, intent(in)                    :: diag_pes 
@@ -58,18 +58,19 @@ end subroutine diag_comm_init
 !> \brief Sets up a communicator for the diag manager
 subroutine diag_comm_split (diag_comm, diag_pes, parent_comm)
  type(fms_diag_comm_type),intent(out)   :: diag_comm !< The diag communicator
- integer, intent(in)                    :: diag_pes 
+ integer, intent(in)                    :: diag_pes !< The number of cores to be used by diag_manager
  integer, intent(in), optional :: parent_comm !< The parent communicator
  integer :: comm !< Parent Communicator
  integer :: mycomm !< New split communicator
- integer :: grk, gsz, lrk, lsz 
- integer :: local_group, local_flag
- logical :: mpi_init_flag
- integer :: merr
- logical, allocatable, dimension(:) :: isThereAComm
- logical :: thereIsAComm = .false. 
- integer :: i,j, ic, nc
- integer, allocatable, dimension(:) :: groups, gather_groups, lsz_array
+ integer :: grk, gsz, lrk, lsz !< global rank, global size, local rank, local size 
+ integer :: local_group, local_flag !< The local group of cores, and a local flag
+ logical :: mpi_init_flag !< True if MPI has been initialized
+ integer :: merr !< error return code
+ logical, allocatable, dimension(:) :: isThereAComm !< an array of .true.s for ranks on the diag_comm
+ logical :: thereIsAComm = .false. !< true if the rank is on the diag communicator
+ integer :: i,j, ic, nc 
+ integer, allocatable, dimension(:) :: groups, gather_groups
+ integer, allocatable, dimension(:) :: lsz_array !< The list of local ranks
 !> Check if mpi is initialized
  call MPI_INITIALIZED (mpi_init_flag, merr)
  if (.not.mpi_init_flag) then 
@@ -102,7 +103,8 @@ subroutine diag_comm_split (diag_comm, diag_pes, parent_comm)
  call mpi_comm_rank(mycomm,lrk,merr)
 !> See if the split created a communicator of the correct size
  allocate(logical :: isThereAComm(gsz)) 
- if (lsz==diag_pes) then
+ if (lsz==diag_pes) then !> If the local size is equal to the number of diag_pes requested, then
+                         !! set up the communicator
      ThereisAComm = .true.
      call diag_set_comm (diag_comm,mycomm,lrk,lsz,grk,local_group,comm,ThereisAComm)
  else
@@ -114,7 +116,8 @@ subroutine diag_comm_split (diag_comm, diag_pes, parent_comm)
  call MPI_ALLGATHER(ThereIsAComm,1,MPI_LOGICAL, &
                IsThereAComm,gsz,MPI_LOGICAL, COMM, merr)
 ic = 0
- do i = 1,gsz
+!> Set diag_comm_exist to true for all ranks on the diag_comm and false for all ranks not
+ do concurrent (i=1:gsz)
      if (IsThereAComm(i)) then
           diag_comm_exist = .true.
           ic = ic +1
