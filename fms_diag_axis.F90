@@ -1,7 +1,8 @@
 module fms_diag_axis_mod
 
-!< use fms_diag_data_mod :: only, diag_error
-!< use fms2_io
+use fms_diag_data_mod, only: diag_error
+use fms2_io
+
 
 type domain1d
  integer :: filler
@@ -26,7 +27,7 @@ type diag_axis_type
      character (len=:), allocatable :: longname !< The longname of the axis
      integer :: alen !< The length of the axis
      integer :: direction !< The direction of the axis
-     character(len=*) :: set_name !< Set name of the axis
+     character(len=:), allocatable :: set_name !< Set name of the axis
      integer :: set !< set number?
      TYPE(domain1d) :: Domain !<Axis domain
      TYPE(domain2d) :: Domain2 !< Axis domain if 2D
@@ -67,7 +68,7 @@ public :: UP, DOWN, VOID_AXIS, HORIZONTAL
 contains
 
 type(diag_axis_type) function fms_diag_axis_init (axis, aname, adata, units, cart, long_name, direction,&
-       & set_name, edges, Domain, Domain2, DomainU, aux, req, tile_count)
+       & set_name, edges, Domain, Domain2, DomainU, aux, req, tile_count, start, ending, attributes)
     type(diag_axis_type), intent(inout)      :: axis !< The axis object
     character(len=*), intent(in)             :: aname !< The name of the axis
     class(*), target, intent(in), dimension(:)    :: adata !< The axis data
@@ -84,6 +85,9 @@ type(diag_axis_type) function fms_diag_axis_init (axis, aname, adata, units, car
     character(len=*), intent(in), optional   :: aux !< ???
     character(len=*), intent(in), optional   :: req !< Is it required???
     integer,          intent(in), optional   :: tile_count !< The tile count
+    integer,          intent(in), optional   :: start !< The starting value of the axis
+    integer,          intent(in), optional   :: ending !< The ending value of the axis
+    character(len=20), intent(in), dimension(:), optional :: attributes !< attributes?
 
     type(domain1d) :: domain_x, domain_y
     integer :: ierr, axlen
@@ -94,19 +98,20 @@ type(diag_axis_type) function fms_diag_axis_init (axis, aname, adata, units, car
     integer :: ls       !< The local starting value
     integer :: le       !< the local ending value
 
+    !Cartesian name error check
     if (len(cart) > 1) call diag_error("fms_diag_axis_init","CARTNAME for "//trim(aname)//&
     " must only be one letter.  You have "//trim(cart),FATAL)
     if (cart .ne. "X" .or. cart .ne. "Y" .or. cart .ne. "Z" .or. &
         cart .ne. "N" .or. cart .ne. "U" .or. cart .ne. "T") &
-         call diag_error("fms_diag_axis_init","CARTNAME for "//trim(aname)//" can only be X "//&
-         "Y Z U or N.  You have "//trim(cart), FATAL)
+        call diag_error("fms_diag_axis_init","CARTNAME for "//trim(aname)//" can only be X "//&
+        "Y Z U or N.  You have "//trim(cart), FATAL)
 
     ! Allocate the axes
     if (.not. allocated(Axis_sets)) then 
-	allocate(Axis_sets(0:1))
+        allocate(Axis_sets(0:1))
     endif
     if (.not. allocated(Axes)) then 
-	allocate(Axes(0:1))
+        allocate(Axes(0:1))
     endif
 
 !---- is there an axis set? ----
@@ -136,19 +141,20 @@ type(diag_axis_type) function fms_diag_axis_init (axis, aname, adata, units, car
              fms_diag_axis_init = Axes(i)
              return
           else if ( set == Axes(i)%set) then
-             if ( trim(lowercase(aname)) == 'time' .or.&
-                  & trim(lowercase(cart)) == 't' .or.&
-                  & trim(lowercase(aname)) == 'nv' .or.&
-                  & trim(lowercase(cart)) == 'n' ) then
+             if ( trim(aname) == 'time' .or.&
+                  & trim(cart) == 't' .or.&
+                  & trim(aname) == 'nv' .or.&
+                  & trim(cart) == 'n' ) then
                 fms_diag_axis_init = Axes(i)
                 return
-             else if ( (lowercase(cart) /= 'x' .and. lowercase(cart) /= 'y')&
-                  & .or. tile /= Axes(i)%tile) then
+             else if ( (cart /= 'x' .and. cart /= 'y')&
+                  & .or. tile /= Axes(i)%tile ) then
                 ! <ERROR STATUS="FATAL">axis_name <NAME> and axis_set already exist.</ERROR>
-                call error_mesg('diag_axis_mod::diag_axis_init',&
-                     & 'axis_name '//trim(name)//' and axis_set already exist.', FATAL)
-             end if
-       end if
+                call diag_error('diag_axis_mod::diag_axis_init',&
+                     & 'axis_name '//trim(aname)//' and axis_set already exist.', FATAL)
+           end if
+         end if
+      end if
     end do
 
     !---- register axis ----
@@ -165,7 +171,7 @@ type(diag_axis_type) function fms_diag_axis_init (axis, aname, adata, units, car
     else
        axlen = size(adata(:))
     end if
-    allocate(axis%adata(0:axlen))
+    !allocate(axis%adata(0:axlen))
 
      axis%aname = trim(aname)
      axis%adata = adata(1:axlen)
@@ -188,8 +194,8 @@ type(diag_axis_type) function fms_diag_axis_init (axis, aname, adata, units, car
      else 
           axis%ending = 1
      end if
-     if (present(longname)) then 
-          axis%longname = trim(longname)
+     if (present(long_name)) then 
+          axis%longname = trim(long_name)
      else
           axis%longname = trim(aname)
      end if
@@ -199,67 +205,67 @@ type(diag_axis_type) function fms_diag_axis_init (axis, aname, adata, units, car
           axis%direction = HORIZONTAL
      end if
      if (present(tile_count)) then
-	  axis%tile = tile_count
+         axis%tile = tile_count
      else 
-	  axis%tile = 1
+         axis%tile = 1
      end if
      if (present(attributes)) then 
           allocate(character(len=20) :: axis%attributes (size(attributes)))
           do i = 1,size(attributes)
-               axis%attributes(i) =  attributes
+               axis%attributes(i) =  attributes(i)
           end do
      end if
 
      !---- Handle the DomainU check
     if (present(DomainU) .and. (present(Domain2) .or. present(Domain)) ) then
        ! <ERROR STATUS="FATAL">Presence of DomainU and another Domain at the same time is prohibited</ERROR>
-       call error_mesg('diag_axis_mod::diag_axis_init',&
+       call diag_error('diag_axis_mod::diag_axis_init',&
             & 'Presence of DomainU and another Domain at the same time is prohibited', FATAL)
     !---- domain2d type ----
     else if ( present(Domain2) .and. present(Domain)) then
        ! <ERROR STATUS="FATAL">Presence of both Domain and Domain2 at the same time is prohibited</ERROR>
-       call error_mesg('diag_axis_mod::diag_axis_init',&
+       call diag_error('diag_axis_mod::diag_axis_init',&
             & 'Presence of both Domain and Domain2 at the same time is prohibited', FATAL)
     else if ( present(Domain2) .or. present(Domain)) then
        if ( axis%cart /= 'X' .and. axis%cart /= 'Y') then
           ! <ERROR STATUS="FATAL">Domain must not be present for an axis which is not in the X or Y direction.</ERROR>
-          call error_mesg('diag_axis_mod::diag_axis_init',&
+          call diag_error('diag_axis_mod::diag_axis_init',&
                & 'A Structured Domain must not be present for an axis which is not in the X or Y direction', FATAL)
        end if
     else if (present(DomainU) .and. axis%cart /= 'U') then
-          call error_mesg('diag_axis_mod::diag_axis_init',&
+          call diag_error('diag_axis_mod::diag_axis_init',&
                & 'In the unstructured domain, the axis cart_name must be U', FATAL)
     end if
 
 
     if ( present(Domain2) ) then
        axis%Domain2 = Domain2
-       call mpp_get_domain_components(Domain2, domain_x, domain_y, tile_count=tile_count)
+       !call mpp_get_domain_components(Domain2, domain_x, domain_y, tile_count=tile_count)
        if ( axis%cart == 'X' ) then
           axis%Domain = domain_x
        end if      
        if ( axis%cart == 'Y' ) then
           axis%Domain = domain_y
-          axis%DomainU = null_DomainUG
-       end if
+          !axis%DomainU = null_domainU 
     else if ( present(Domain)) then
        !---- domain1d type ----
-       axis%Domain2 = null_domain2d ! needed since not 2-D domain
+       !axis%Domain2 = null_domain2 ! needed since not 2-D domain
        axis%Domain = Domain
-       axis%DomainU = null_DomainUG
+       !axis%DomainU = null_domainU
     else if (present(DomainU)) then
-       axis%Domain2 = null_domain2d
-       axis%Domain = null_domain1d
+       !axis%Domain2 = null_domain2
+       !axis%Domain = null_domain
        axis%DomainU = DomainU
     else
-       axis%Domain2 = null_domain2d
-       axis%Domain = null_domain1d
-       axis%DomainU = null_domainU
+       !axis%Domain2 = null_domain2
+       !axis%Domain = null_domain1
+       !axis%DomainU = null_domainU
     end if
-	
-    axis%initialized = .true.
+  end if
 
-    Axes(num_def_axes) = axis
+     axis%initialized = .true.
+
+     Axes(num_def_axes) = axis
 end function fms_diag_axis_init
 
   
@@ -277,6 +283,5 @@ integer function get_axis_set_num(set_name)
        end if
     end do
 end function get_axis_set_num
- 
 
 end module fms_diag_axis_mod
