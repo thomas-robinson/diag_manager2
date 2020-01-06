@@ -1,4 +1,8 @@
 module fms_diag_send_data_mod
+
+use fms_diag_averaging_mod, only: get_average, alloc_subarray
+use fms_diag_write_data_mod, only: write_static
+use fms_diag_data_mod,  only: diag_null, diag_error, fatal, note, warning
 use fms_diag_object_mod
 !> \descrption The user API for diag_manager is send_data.  Users pass their variable object to
 !! this routine, and magic happens.
@@ -81,6 +85,7 @@ subroutine fms_send_data4d(diagobj, var, time, is_in, js_in, ks_in, mask, &
      var(lbound(var,1),lbound(var,2),lbound(var,3),lbound(var,4)) )
 
 end subroutine fms_send_data4d
+
 !> \descrption 5D wrapper for fms_send_data
 subroutine fms_send_data5d(diagobj, var, time, is_in, js_in, ks_in, mask, &
                                    rmask, ie_in, je_in, ke_in, weight, err_msg)
@@ -134,11 +139,14 @@ subroutine fms_send_data2d (diagobj, var, time, is_in, js_in, ks_in, mask, &
 end subroutine fms_send_data2d
 
 !> \descrption 3D wrapper for fms_send_data
-subroutine fms_send_data3d (diagobj, var, time, is_in, js_in, ks_in, mask, &
+subroutine fms_send_data3d (diagobj, var, varname, time, is_in, js_in, ks_in, mask, &
                                    rmask, ie_in, je_in, ke_in, weight, err_msg)
  class (fms_diag_object),target, intent(inout), allocatable :: diagobj !< The diag variable object
- class(*), dimension(:,:,:)   , intent(in) , target         :: var !< The variable
+ !! TODO: real vs char(*)
+ !!class(*), dimension(:,:,:)   , intent(in) , target         :: var !< The variable
+ real(kind=8), dimension(:,:,:)   , intent(in) , target         :: var !< The variable
  class(*), dimension(:,:,:)   ,              pointer        :: vptr => NULL() !< A pointer to the data
+ character(len=*), intent(in)                               :: varname  !!TODO: Is this neccesary
  integer, optional            , intent(in)                  :: time !< A time place holder
  integer, optional            , intent(in)                  :: is_in !< Start of the first dimension
  integer, optional            , intent(in)                  :: js_in !< Start of the second dimension
@@ -152,13 +160,33 @@ subroutine fms_send_data3d (diagobj, var, time, is_in, js_in, ks_in, mask, &
  CHARACTER(len=*)             , INTENT(out), OPTIONAL       :: err_msg
 ! local vars
  class (fms_diag_object)      , pointer                     :: dptr => NULL()
+
 !
 !> If the diagnostic object is not allocated, then return
- if (.not.allocated( diagobj )) return
+ if (.not. allocated( diagobj )) then
+    call diag_error("fms_send_data3d", "The diag object " // diagobj%get_varname() // &
+          " is not allocated", WARNING)
+ endif
+ return
+
 !> If this is the first call in, set the type to be fms_diag_object_3d
+!> first check if already of type 3d
  call switch_to_right_type(diagobj, null_3d, var(lbound(var,1),lbound(var,2),lbound(var,3)) )
 
+!> If the diagnostic object is not registered, then return.
+if(.not. diagobj%is_registeredB()) return
+
+!> Write the object if its static
+!> TODO: Only if its not yet writtennetcd
+if ( diagobj%is_static() ) then
+    call write_static(diagobj, var, varname, time, is_in, js_in, ks_in, mask, &
+                      rmask, ie_in, je_in, ke_in, weight, err_msg)
+!else write dynamic
+endif
 end subroutine fms_send_data3d
+
+
+
 !> \Description This routine is used to switch the diag object to the correct type based on the dimensions
 !! of the input data.  It then determines the type of the data, and stores that within the object.  Only
 !! one datum needs to be send in to determine the data type, so this routine is shared by all of the
@@ -176,7 +204,7 @@ subroutine switch_to_right_type(diagobj, null_obj,var)
      type is (fms_diag_object)
 !> Switch the diagobj to the correct type
           dcopy = null_obj !< Copy null into the temp object to set the type
-          call dptr%copy(dcopy) !> Copy the values of the object into the temp dcopy
+          call dptr%copy(dcopy) !> Copy the values of the object into the tFmsNetcdfFile_temp dcopy
           deallocate(diagobj) !> Deallocate the object
           diagobj = null_obj !> Copy the null into the variable object to set the type
           call dcopy%copy(diagobj) !> Copy the original values in

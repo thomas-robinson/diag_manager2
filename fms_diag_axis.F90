@@ -1,14 +1,17 @@
 module fms_diag_axis_mod
 
-use fms_diag_data_mod :: only, diag_error
-use fms2_io
+use fms_diag_data_mod,  only: diag_null, diag_error, fatal, note, warning
+use fms2_io_mod
 
+!!TODO:
 type domain1d
  integer :: filler
-end type domain2d
-type domain1d
+end type domain1d
+
+type domain2d
  integer :: filler
 end type domain2d
+
 type domainUG
  integer :: filler
 end type domainUG
@@ -29,7 +32,6 @@ type diag_axis_type
      class(*), allocatable, dimension (:) :: adata !< The axis data
      character (len=:), dimension(:), allocatable :: attributes !< The axis metadata
      logical, allocatable :: initialized
-
 end type diag_axis_type
 
 
@@ -48,11 +50,11 @@ public :: UP, DOWN, VOID_AXIS, HORIZONTAL
 contains
 
 subroutine fms_diag_axis_init (axis, aname, adata, units, cart, long_name, direction,&
-       & set_name, edges, Domain, Domain2, DomainU, aux, req, tile_count)
+       & set_name, edges, Domain, Domain2, DomainU, aux, req, tile_count, start, ending, attributes)
     type(diag_axis_type), intent(inout)      :: axis !< The axis object
     CHARACTER(len=*), INTENT(in)             :: aname !< The name of the axis
     class(*), target, INTENT(in), DIMENSION(:)    :: adata !< The axis data
-    class(*), pointer,          , DIMENSION(:)    :: dptr=> NULL() !< A pointer to the data
+    !class(*), pointer,          , DIMENSION(:)    :: dptr=> NULL() !< A pointer to the data
     CHARACTER(len=*), INTENT(in)             :: units !< The axis units
     CHARACTER(len=*), INTENT(in)             :: cart !< The cartesian name of the axis 
     CHARACTER(len=*), INTENT(in), OPTIONAL   :: long_name !< Axis long name
@@ -65,6 +67,9 @@ subroutine fms_diag_axis_init (axis, aname, adata, units, cart, long_name, direc
     CHARACTER(len=*), INTENT(in), OPTIONAL   :: aux !< ???
     CHARACTER(len=*), INTENT(in), OPTIONAL   :: req !< Is it required???
     INTEGER,          INTENT(in), OPTIONAL   :: tile_count !< The tile count
+    INTEGER,          INTENT(in), OPTIONAL   :: start !!TODO:
+    INTEGER,          INTENT(in), OPTIONAL   :: ending !!TODO:
+    CHARACTER(len=*), INTENT(in), OPTIONAL   :: attributes(:) !!TODO
 
     TYPE(domain1d) :: domain_x, domain_y
     INTEGER :: ierr, axlen
@@ -74,18 +79,22 @@ subroutine fms_diag_axis_init (axis, aname, adata, units, cart, long_name, direc
 
      integer :: ls       !< The local starting value
      integer :: le       !< the local ending value
-     integer :: i
-     if (len(cart) > 1) call diag_error("fms_diag_axis_init","CARTNAME for "//trim(aname)//&
-     " must only be one letter.  You have "//trim(cart),FATAL)
+
+     if (len(cart) > 1) then
+        call diag_error("fms_diag_axis_init","CARTNAME for "//trim(aname)// &
+            " must only be one letter.  You have " // trim(cart), FATAL)
+     end if
+
      if (cart .ne. "X" .or. cart .ne. "Y" .or. cart .ne. "Z" .or. &
-         cart .ne. "N" .or. cart .ne. "U" .or. cart .ne. "T") &
-          call diag_error("fms_diag_axis_init","CARTNAME for "//trim(aname)//" can only be X "//&
+         cart .ne. "N" .or. cart .ne. "U" .or. cart .ne. "T") then
+        call diag_error("fms_diag_axis_init","CARTNAME for "//trim(aname)//" can only be X "// &
           "Y Z U or N.  You have "//trim(cart), FATAL)
+          end if
      axis%aname = trim(aname)
      axis%cart = cart
      if (present(start)) then 
           axis%start = start
-     else 
+     else
           axis%start = 1
      endif
      if (present(ending)) then 
@@ -93,8 +102,8 @@ subroutine fms_diag_axis_init (axis, aname, adata, units, cart, long_name, direc
      else 
           axis%ending = 1
      endif
-     if (present(longname)) then 
-          axis%longname = trim(longname)
+     if (present(long_name)) then
+          axis%longname = trim(long_name)
      else
           axis%longname = trim(aname)
      endif
@@ -104,9 +113,9 @@ subroutine fms_diag_axis_init (axis, aname, adata, units, cart, long_name, direc
           axis%direction = HORIZONTAL
      endif
      if (present(attributes)) then 
-          alloacte(character(len=20) :: axis%attributes (size(attributes)))
+          allocate(character(len=20) :: axis%attributes (size(attributes)))
           do i = 1,size(attributes)
-               axis%attributes(i) =  attributes
+               axis%attributes(i) =  attributes(i)
           enddo
      endif
 
