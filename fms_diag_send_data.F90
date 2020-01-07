@@ -178,7 +178,7 @@ if(.not. diagobj%is_registeredB()) return
 
 !> Write the object if its static
 !> TODO: Only if its not yet writtennetcd
-if ( diagobj%is_static() ) then
+if ( .not. diagobj%is_static() ) then
     call write_static(diagobj, var, varname, time, is_in, js_in, ks_in, mask, &
                       rmask, ie_in, je_in, ke_in, weight, err_msg)
 !else write dynamic
