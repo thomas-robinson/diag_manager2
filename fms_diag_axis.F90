@@ -1,6 +1,6 @@
 module fms_diag_axis_mod
 
-use fms_diag_data_mod, only: diag_error
+use fms_diag_data_mod, only: diag_error, fatal, note, warning
 use fms2_io
 
 
