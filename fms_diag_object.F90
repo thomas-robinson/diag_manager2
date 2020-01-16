@@ -7,11 +7,15 @@ module fms_diag_object_mod
 !! The procedures of this object and the types are all in this module.  The fms_dag_object is a type 
 !! that contains all of the information of the variable.  It is extended by a type that holds the
 !! appropriate buffer for the data for manipulation.
+use fms_diag_data_mod,  only: fms_io_obj !!This is temporary
 use fms_diag_data_mod,  only: diag_null, diag_error, fatal, note, warning
 use fms_diag_data_mod,  only: r8, r4, i8, i4, string, null_type_int
-use fms_diag_data_mod, only: diag_null, diag_not_found, diag_not_registered, diag_registered_id
-use fms_diag_table_mod,  only: is_field_type_null
+use fms_diag_data_mod,  only: diag_null, diag_not_found, diag_not_registered, diag_registered_id
+use fms_diag_table_mod, only: is_field_type_null
 use fms_diag_table_mod, only: diag_fields_type, diag_files_type, get_diag_table_field
+use fms_diag_axis_mod,  only: diag_axis_type
+use fms_diag_util_mod,  only: int_to_cs, logical_to_cs
+
 
 implicit none
 
@@ -46,7 +50,7 @@ type fms_diag_object
      type (diag_fields_type)                           :: diag_field         !< info from diag_table
      type (diag_files_type),allocatable, dimension(:)  :: diag_file          !< info from diag_table
      integer, allocatable, private                    :: diag_id           !< unique id for varable
-!     class (fms_io_obj), allocatable, dimension(:)    :: fms_fileobj        !< fileobjs
+     type (fms_io_obj), allocatable, dimension(:)     :: fms_fileobj        !< fileobjs
      character(len=:), allocatable, dimension(:)      :: metadata          !< metedata for the variable
      logical, private                                 :: static         !< true is this is a static var
      logical, allocatable, private                    :: registered     !< true when registered
@@ -59,10 +63,10 @@ type fms_diag_object
      character(len=:), allocatable, private           :: modname           !< the module
      integer, private                                 :: missing_value     !< The missing fill value
      integer, allocatable, dimension(:), private      :: axis_ids          !< variable axis IDs
-!     type (diag_axis), allocatable, dimension(:)      :: axis              !< The axis object 
+     type (diag_axis_type), allocatable, dimension(:)      :: axis              !< The axis object
 
      contains
-!     procedure :: send_data => fms_send_data
+!     procedure :: send_data => fms_send_data  !!TODO
      procedure :: init_ob => diag_obj_init
      procedure :: diag_id_inq => fms_diag_id_inq
      procedure :: copy => copy_diag_obj
@@ -71,6 +75,12 @@ type fms_diag_object
      procedure :: is_registered => diag_ob_registered
      procedure :: set_type => set_vartype
      procedure :: vartype_inq => what_is_vartype
+
+     procedure :: is_static => diag_obj_is_static
+     procedure :: is_registeredB => diag_obj_is_registered
+     procedure :: get_vartype => diag_obj_get_vartype
+     procedure :: get_varname => diag_obj_get_varname
+
 end type fms_diag_object
 !> \brief Extends the variable object to work with multiple types of data
 type, extends(fms_diag_object) :: fms_diag_object_scalar
@@ -132,7 +142,7 @@ end subroutine fms_diag_object_init
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !> \Description Sets the diag_id to the not registered value.
 subroutine diag_obj_init(ob)
- class (fms_diag_object)      , intent(inout)                :: ob
+ class (fms_diag_object)      , intent(inout)       :: ob
  select type (ob)
   class is (fms_diag_object)
      ob%diag_id = diag_not_registered !null_ob%diag_id
@@ -144,7 +154,7 @@ subroutine fms_register_diag_field_obj (dobj, modname, varname, axes, time, long
  class(fms_diag_object)     , intent(inout)            :: dobj
  character(*)               , intent(in)               :: modname!< The module name
  character(*)               , intent(in)               :: varname!< The variable name
- integer     , dimension(:) , intent(in), optional     :: axes   !< The axes 
+ integer     , dimension(:) , intent(in), optional     :: axes   !< Th character(:),allocatable :: rese axes
  integer                    , intent(in), optional     :: time !< Time placeholder 
  character(*)               , intent(in), optional     :: longname!< The variable long name
  character(*)               , intent(in), optional     :: units  !< Units of the variable
@@ -253,6 +263,7 @@ subroutine what_is_vartype(objin)
  end select
 end subroutine what_is_vartype
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!MZ Is this a TODO. Many problems:
 !> \brief Registers the object
 subroutine diag_ob_registered(objin , reg)
  class (fms_diag_object)      , intent(inout):: objin 
@@ -296,15 +307,76 @@ integer function fms_diag_id_inq (dobj) result(diag_id)
      diag_id = dobj%diag_id
 end function fms_diag_id_inq
 
+!> Function to return a character (string) representation of the most basic
+!> object identity info. Intended for debugging and warning. The format produced is:
+!> [dobj: o.varname(string|?), vartype (string|?), o.registered (T|F|?), diag_id (id|?)].
+!> A questionmark "?" is set in place of the variable that is not yet allocated
+!>TODO: Add diag_id ?
+function fms_diag_obj_as_string_basic(dobj) result(rslt)
+    class(fms_diag_object), allocatable, intent(in) :: dobj
+    character(:), allocatable :: rslt
+    character (len=:), allocatable :: registered, vartype, varname, diag_id
+    if ( .not. allocated (dobj)) then
+        varname = "?"
+        vartype = "?"
+        registered = "?"
+        diag_id = "?"
+        rslt = "[Obj:" // varname // "," // vartype // "," // registered // "," // diag_id // "]"
+        return
+     end if
+
+    if(allocated (dobj%registered)) then
+        registered = logical_to_cs (dobj%registered)
+    else
+        registered = "?"
+    end if
+
+    if(allocated (dobj%diag_id)) then
+      diag_id = int_to_cs (dobj%diag_id)
+    else
+        diag_id = "?"
+    end if
+
+    if(allocated (dobj%vartype)) then
+        vartype = int_to_cs (dobj%vartype)
+    else
+        registered = "?"
+    end if
+
+    if(allocated (dobj%varname)) then
+        varname = dobj%varname
+    else
+        registered = "?"
+    end if
+
+    rslt = "[Obj:" // varname // "," // vartype // "," // registered // "," // diag_id // "]"
+
+end function fms_diag_obj_as_string_basic
 
 
+function diag_obj_is_registered (obj) result (rslt)
+    class(fms_diag_object), intent(in) :: obj
+    logical :: rslt
+    rslt = obj%registered
+end function diag_obj_is_registered
 
+function diag_obj_is_static (obj) result (rslt)
+    class(fms_diag_object), intent(in) :: obj
+    logical :: rslt
+    rslt = obj%static
+end function diag_obj_is_static
 
+function diag_obj_get_vartype (obj) result (rslt)
+    class(fms_diag_object), intent(in) :: obj
+    integer :: rslt
+    rslt = obj%vartype
+end function diag_obj_get_vartype
 
-
-
-
-
+function diag_obj_get_varname(obj) result (rslt)
+    class(fms_diag_object), intent(in) :: obj
+    character(len=len(obj%varname)) :: rslt
+    rslt = obj%varname
+end function diag_obj_get_varname
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -439,6 +511,7 @@ pure logical function int_eq_obj (i,obj) result(ll)
      ll = (i == obj%diag_id)
   endif
 end function int_eq_obj
+
 !> \brief override for checking if object ID is not equal to an integer (IDs)
 !> @note unalloacted obj is assumed to equal diag_not_registered
 pure logical function obj_ne_int (obj,i) result(ll)
@@ -452,6 +525,7 @@ pure logical function obj_ne_int (obj,i) result(ll)
      ll = (obj%diag_id .ne. i)
   endif
 end function obj_ne_int
+
 !> \brief override for checking if integer (ID) is not equal to an object ID
 !> @note unalloacted obj is assumed to equal diag_not_registered
 pure logical function int_ne_obj (i,obj) result(ll)
@@ -465,6 +539,5 @@ pure logical function int_ne_obj (i,obj) result(ll)
      ll = (i .ne. obj%diag_id)
   endif
 end function int_ne_obj
-
 
 end module fms_diag_object_mod

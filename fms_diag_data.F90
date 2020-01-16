@@ -51,12 +51,12 @@ type, bind(c) :: diag_fields_type
      character (c_char) :: module_location(20) !< The module
      character (c_char) :: key(8) !< Storage for the key in the yaml file
 end type diag_fields_type
+
 !> Placeholder for fms2_io file object type.
+!! TODO: Rename to fms_fname_type ?
 type fms_io_obj
-     character(len=100) :: fname
+    character(len=100) :: fname
 end type fms_io_obj
-
-
 
 
 integer :: fatal=-143, note=143, warning=143*2

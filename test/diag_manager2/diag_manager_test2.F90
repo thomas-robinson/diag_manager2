@@ -43,7 +43,7 @@ is=1 ; js=1 ; ks=1
      enddo
 
           if (id_tdata > diag_not_registered) then
-               call send_data(id_tdata, tdata(:,:,:,t), t, is, js, ks)
+               call send_data(id_tdata, tdata(:,:,:,t),"tdata",  t, is, js, ks)
           endif
           if (id_2d > diag_not_registered) then
            write (6,*) "Call send data"

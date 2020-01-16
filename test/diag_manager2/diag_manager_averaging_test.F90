@@ -4,7 +4,7 @@
 !! Contains a program for testing module fms_diag_omp_aux
 program diag_manager_averaging_test
     use omp_lib
-    use fms_diag_averaging, only: get_average, alloc_subarray, num_offloading_threads
+    use fms_diag_averaging_mod, only: get_average, alloc_subarray, num_offloading_threads
     use fms_diag_averaging_dummy
     implicit none
 
@@ -226,7 +226,7 @@ end program diag_manager_averaging_test
     !Prints some info helpful in device offloading
     subroutine print_device_info()
         use omp_lib
-        use fms_diag_averaging, only: num_offloading_threads
+        use fms_diag_averaging_mod, only: num_offloading_threads
         implicit none
 
         integer :: num_threads, tid, num_gpu_threads,n_gpu_thread
@@ -273,4 +273,7 @@ end program diag_manager_averaging_test
 
 
     end subroutine print_device_info
+
+
+
 

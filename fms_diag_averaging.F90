@@ -9,7 +9,7 @@
 !! TODO 3) Determine loggin error policy (related to array allocation if any)
 !! TODO 4) Delete all experimental subroutines
 
-module fms_diag_averaging
+module fms_diag_averaging_mod
     use omp_lib
     implicit none
     private get_average_1D, get_average_2D, get_average_3D, get_average_4D, &
@@ -248,5 +248,5 @@ end function num_offloading_threads
      end subroutine alloc_subarray_4D
 
 
-end module fms_diag_averaging
+end module fms_diag_averaging_mod
 
